@@ -1,8 +1,35 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
-Description: S3 Uploader - sample application
+Description: S3 Uploader
 
 Resources:
+  filesDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "filename"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "filename"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: "myfiles"
+
+  guestbookDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "timestamp"
+          AttributeType: "N"
+      KeySchema:
+        - AttributeName: "timestamp"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: "guestbook"
   # HTTP API
   MyApi:
     Type: AWS::Serverless::HttpApi
@@ -20,12 +47,10 @@ Resources:
         AllowOrigins:
           - "*"
 
-  ## Lambda functions
   UploadRequestFunction:
-    # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: getSignedURL/
+      CodeUri: lambdas/postFile/
       Handler: app.handler
       Runtime: nodejs12.x
       Timeout: 3
@@ -34,20 +59,109 @@ Resources:
         Variables:
           UploadBucket: !Ref S3UploadBucket
       Policies:
+        - AmazonDynamoDBFullAccess
         - S3WritePolicy:
             BucketName: !Ref S3UploadBucket
-        ## This permission allows the Lambda function to request signed URLs
-        ## for objects that will be publicly readable. Uncomment if you want this ACL.
         - Statement:
-          - Effect: Allow
-            Resource: !Sub 'arn:aws:s3:::${S3UploadBucket}/'
-            Action:
-              - s3:putObjectAcl
+            - Effect: Allow
+              Resource: !Sub "arn:aws:s3:::${S3UploadBucket}/"
+              Action:
+                - s3:putObjectAcl
       Events:
         UploadAssetAPI:
           Type: HttpApi
           Properties:
-            Path: /uploads
+            Path: /postFile
+            Method: post
+            ApiId: !Ref MyApi
+
+  GuestlistPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/postGuestbookComment/
+      Handler: app.handler
+      Runtime: nodejs12.x
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        UploadAssetAPI:
+          Type: HttpApi
+          Properties:
+            Path: /postGuestbookComment
+            Method: post
+            ApiId: !Ref MyApi
+
+  GuestlistReadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/getGuestbookComments/
+      Handler: app.handler
+      Runtime: nodejs12.x
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        UploadAssetAPI:
+          Type: HttpApi
+          Properties:
+            Path: /getGuestbookComments
+            Method: get
+            ApiId: !Ref MyApi
+
+  CommentPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/postComment/
+      Handler: app.handler
+      Runtime: nodejs12.x
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        UploadAssetAPI:
+          Type: HttpApi
+          Properties:
+            Path: /postComment
+            Method: post
+            ApiId: !Ref MyApi
+
+  CommentReadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/getComments/
+      Handler: app.handler
+      Runtime: nodejs12.x
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        UploadAssetAPI:
+          Type: HttpApi
+          Properties:
+            Path: /getComments
+            Method: get
+            ApiId: !Ref MyApi
+
+  FileReadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/getFiles/
+      Handler: app.handler
+      Runtime: nodejs12.x
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        UploadAssetAPI:
+          Type: HttpApi
+          Properties:
+            Path: /getFiles
             Method: get
             ApiId: !Ref MyApi
 
@@ -57,14 +171,14 @@ Resources:
     Properties:
       CorsConfiguration:
         CorsRules:
-        - AllowedHeaders:
-            - "*"
-          AllowedMethods:
-            - GET
-            - PUT
-            - HEAD
-          AllowedOrigins:
-            - "*"
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - HEAD
+            AllowedOrigins:
+              - "*"
 
 ## Take a note of the outputs for deploying the workflow templates in this sample application
 Outputs:
@@ -73,5 +187,4 @@ Outputs:
     Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com"
   S3UploadBucketName:
     Description: "S3 bucket for application uploads"
-    Value: !Ref 'S3UploadBucket'
-
+    Value: !Ref "S3UploadBucket"
