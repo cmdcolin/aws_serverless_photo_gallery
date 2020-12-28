@@ -11,11 +11,11 @@ This repo has extended the concept to include the following features
 - Some simple sorting and filtering
 - Client side image resize for thumbnail
 
-Example site here https://myloveydove.com/?password=nottherealpassword for our
-amazing dog dixie (RIP)
+Example site here https://myloveydove.com/ for our amazing dog dixie (RIP)
 
-Adding `?password=nottherealpassword` let's you see the upload buttons but will
-not let you actually post (see #security section)
+You can also see the features for posting/commenting here
+https://myloveydove.com/?password=nottherealpassword but this will not let you
+actually post (see #security section)
 
 ## Architecture
 

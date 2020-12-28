@@ -15,11 +15,11 @@ import PublishIcon from "@material-ui/icons/Publish";
 import CreateIcon from "@material-ui/icons/Create";
 import { NumberParam, StringParam, useQueryParam } from "use-query-params";
 
-//@ts-ignore
 import ImageBlobReduce from "image-blob-reduce";
-//@ts-ignore
 import Pica from "pica";
 
+// this is needed to disable the default features including webworkers, which
+// cra has trouble with currently
 const pica = Pica({ features: ["js", "wasm", "cib"] });
 const reduce = new ImageBlobReduce({ pica });
 
