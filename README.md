@@ -10,6 +10,7 @@ This repo has extended the concept to include the following features
 - Upload multiple files at a time
 - Some simple sorting and filtering
 - Client side image resize for thumbnail
+- Client side EXIF parse to read date
 
 Example site here https://myloveydove.com/ for our amazing dog dixie (RIP)
 

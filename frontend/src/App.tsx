@@ -467,6 +467,8 @@ function UploadDialog({
                         exifData.DateTime.description
                       );
                       data.append("exifTimestamp", `${exifTimestamp}`);
+                    } else {
+                      data.append("exifTimestamp", `${+new Date("1960")}`);
                     }
 
                     const res = await myfetchjson(API_ENDPOINT + "/postFile", {
