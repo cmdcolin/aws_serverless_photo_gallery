@@ -652,7 +652,7 @@ function Gallery({ children }: { children: React.ReactNode }) {
   const [password] = useQueryParam("password", StringParam);
   const [counter, setCounter] = useState(0);
   const [filter, setFilter] = useState(initialFilter || "all");
-  const [sort, setSort] = useState(initialSort || "date_uploaded_asc");
+  const [sort, setSort] = useState(initialSort || "date_uploaded_dec");
   const [start, setStart] = useState(initialStart || 0);
 
   const [dialogFile, setDialogFile] = useState<File>();
@@ -686,21 +686,27 @@ function Gallery({ children }: { children: React.ReactNode }) {
 
   const fileList = useMemo(() => {
     const future = +new Date("3000");
+    const past = +new Date("1960");
+    function getTimestamp(t: { exifTimestamp?: number }, repl: number) {
+      return !t.exifTimestamp || t.exifTimestamp === past
+        ? repl
+        : t.exifTimestamp;
+    }
     if (filteredFiles) {
       if (sort === "date_uploaded_asc") {
-        return filteredFiles.sort((a, b) => b.timestamp - a.timestamp);
+        return filteredFiles.sort((a, b) => a.timestamp - b.timestamp);
       }
       if (sort === "date_uploaded_dec") {
-        return filteredFiles.sort((a, b) => a.timestamp - b.timestamp);
+        return filteredFiles.sort((a, b) => b.timestamp - a.timestamp);
       }
       if (sort === "date_exif_asc") {
         return filteredFiles.sort(
-          (a, b) => (b.exifTimestamp || 0) - (a.exifTimestamp || 0)
+          (a, b) => getTimestamp(a, future) - getTimestamp(b, future)
         );
       }
       if (sort === "date_exif_dec") {
         return filteredFiles.sort(
-          (a, b) => (a.exifTimestamp || future) - (b.exifTimestamp || future)
+          (a, b) => getTimestamp(b, past) - getTimestamp(a, past)
         );
       }
       if (sort === "random") {
@@ -775,13 +781,7 @@ function Gallery({ children }: { children: React.ReactNode }) {
         <div className={classes.error}>{`${error}`}</div>
       ) : fileList ? (
         fileList.slice(start, start + PAGE_SIZE).map((file) => {
-          const {
-            user,
-            comments = [],
-            message,
-            timestamp,
-            exifTimestamp,
-          } = file;
+          const { comments = [] } = file;
           const token = myimages[Math.floor(Math.random() * myimages.length)];
           const border =
             myborders[Math.floor(Math.random() * myborders.length)];
@@ -837,9 +837,8 @@ function Gallery({ children }: { children: React.ReactNode }) {
           );
         })
       ) : null}
-      {files ? (
-        <>
-          <br />
+      {filteredFiles ? (
+        <div>
           <button
             onClick={() => {
               setStart(0);
@@ -860,27 +859,31 @@ function Gallery({ children }: { children: React.ReactNode }) {
           </button>
           <div style={{ display: "inline" }}>
             {Math.floor(start / PAGE_SIZE)} /{" "}
-            {Math.floor(files.length / PAGE_SIZE)}
+            {Math.floor(filteredFiles.length / PAGE_SIZE)}
           </div>
           <button
             onClick={() => {
               setStart(start + PAGE_SIZE);
               setParamStart(start + PAGE_SIZE);
             }}
-            disabled={start + PAGE_SIZE >= files.length}
+            disabled={start + PAGE_SIZE >= filteredFiles.length}
           >
             Next &gt;
           </button>
           <button
             onClick={() => {
-              setStart(files.length - (files.length % PAGE_SIZE));
-              setParamStart(files.length - (files.length % PAGE_SIZE));
+              setStart(
+                filteredFiles.length - (filteredFiles.length % PAGE_SIZE)
+              );
+              setParamStart(
+                filteredFiles.length - (filteredFiles.length % PAGE_SIZE)
+              );
             }}
-            disabled={start + PAGE_SIZE >= files.length}
+            disabled={start + PAGE_SIZE >= filteredFiles.length}
           >
             &gt;&gt; Last
           </button>
-        </>
+        </div>
       ) : null}
     </div>
   );
