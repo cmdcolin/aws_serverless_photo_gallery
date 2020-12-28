@@ -68,7 +68,7 @@ The process of making this was pretty involved so I made several blogposts about
 
 The app only allows someone who visits the page with a special URL format e.g.
 `?password=yourSecretPassword` to upload files and post comments. Users without
-the right password are not be able to post comments or upload files. Having the
+the right password are not able to post comments or upload files. Having the
 password helps prevents drive by spam that would be otherwise hard to moderate
 
 If the password URL parameter is not supplied, the buttons for uploading are

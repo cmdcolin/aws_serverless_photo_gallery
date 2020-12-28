@@ -636,7 +636,7 @@ function getCaption(file: File) {
       ? `${user ? user + " - " : ""}${message ? message : ""}`
       : " "
   } posted ${new Date(timestamp).toLocaleDateString()} ${
-    exifTimestamp
+    exifTimestamp && exifTimestamp !== +new Date("1960")
       ? `| taken ${new Date(exifTimestamp).toLocaleDateString()}`
       : ""
   }`;
