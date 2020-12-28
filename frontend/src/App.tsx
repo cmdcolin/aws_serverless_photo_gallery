@@ -227,7 +227,9 @@ function PictureDialog({ onClose, file }: { onClose: Function; file?: File }) {
       <DialogTitle>{file ? file.filename : ""}</DialogTitle>
       <DialogContent>
         {file ? (
-          <Media file={file} style={{ width: "80%", maxHeight: "70%" }} />
+          <Media file={file} style={{ width: "80%", maxHeight: "70%" }}>
+            {getCaption(file)}
+          </Media>
         ) : null}
         {error ? (
           <div className={classes.error}>{`${error}`}</div>
@@ -625,6 +627,19 @@ function Media({
   );
 }
 
+function getCaption(file: File) {
+  const { user, message, timestamp, exifTimestamp } = file;
+  return `${
+    user || message
+      ? `${user ? user + " - " : ""}${message ? message : ""}`
+      : " "
+  } posted ${new Date(timestamp).toLocaleDateString()} ${
+    exifTimestamp
+      ? `| taken ${new Date(exifTimestamp).toLocaleDateString()}`
+      : ""
+  }`;
+}
+
 function Gallery({ children }: { children: React.ReactNode }) {
   const [files, setFiles] = useState<File[]>();
   const [error, setError] = useState<Error>();
@@ -794,19 +809,14 @@ function Gallery({ children }: { children: React.ReactNode }) {
                 }}
                 style={style}
               >
-                {user || message
-                  ? `${user ? user + " - " : ""}${message ? message : ""}`
-                  : ""}{" "}
-                posted {new Date(timestamp).toLocaleDateString()}{" "}
-                {exifTimestamp
-                  ? `/ taken ${new Date(exifTimestamp).toLocaleDateString()}`
-                  : ""}
+                {getCaption(file)}
                 <Link
                   href="#"
                   onClick={() => {
                     setDialogFile(file);
                   }}
                 >
+                  {" "}
                   ({comments.length} comments)
                 </Link>
               </Media>
