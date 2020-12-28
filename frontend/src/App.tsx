@@ -787,6 +787,10 @@ function Gallery({ children }: { children: React.ReactNode }) {
           >
             &lt; Previous
           </button>
+          <div style={{ display: "inline" }}>
+            {Math.floor(start / PAGE_SIZE)} /{" "}
+            {Math.floor(files.length / PAGE_SIZE)}
+          </div>
           <button
             onClick={() => {
               setStart(start + PAGE_SIZE);
