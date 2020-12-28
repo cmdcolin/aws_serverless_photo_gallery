@@ -387,7 +387,7 @@ function UploadDialog({
           id="user"
         />
         <br />
-        <label htmlFor="user">message (optional) </label>
+        <label htmlFor="user">album name (optional) </label>
         <input
           type="text"
           value={message}
@@ -656,6 +656,8 @@ function Gallery({ children }: { children: React.ReactNode }) {
           onChange={(event) => {
             setFilter(event.target.value);
             setFilterParam(event.target.value);
+            setStart(0);
+            setParamStart(0);
           }}
         >
           <MenuItem value={"all"}>all</MenuItem>
@@ -772,6 +774,7 @@ function Gallery({ children }: { children: React.ReactNode }) {
               setStart(0);
               setParamStart(0);
             }}
+            disabled={start === 0}
           >
             &lt;&lt; First
           </button>
@@ -798,6 +801,7 @@ function Gallery({ children }: { children: React.ReactNode }) {
               setStart(files.length - (files.length % PAGE_SIZE));
               setParamStart(files.length - (files.length % PAGE_SIZE));
             }}
+            disabled={start + PAGE_SIZE >= files.length}
           >
             &gt;&gt; Last
           </button>
@@ -814,7 +818,9 @@ function Header() {
     <div>
       <div className={classes.space}>
         <h1>
-          dixie
+          <a style={{ color: "white" }} href="/">
+            dixie
+          </a>
           <img
             src="img/animated-candle-image-0093.gif"
             style={{ height: "1em" }}
