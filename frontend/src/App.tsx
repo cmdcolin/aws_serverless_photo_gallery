@@ -769,6 +769,14 @@ function Gallery({ children }: { children: React.ReactNode }) {
           <br />
           <button
             onClick={() => {
+              setStart(0);
+              setParamStart(0);
+            }}
+          >
+            &lt;&lt; First
+          </button>
+          <button
+            onClick={() => {
               setStart(start - PAGE_SIZE);
               setParamStart(start - PAGE_SIZE);
             }}
@@ -784,6 +792,14 @@ function Gallery({ children }: { children: React.ReactNode }) {
             disabled={start + PAGE_SIZE >= files.length}
           >
             Next &gt;
+          </button>
+          <button
+            onClick={() => {
+              setStart(files.length - (files.length % PAGE_SIZE));
+              setParamStart(files.length - (files.length % PAGE_SIZE));
+            }}
+          >
+            &gt;&gt; Last
           </button>
         </>
       ) : null}
