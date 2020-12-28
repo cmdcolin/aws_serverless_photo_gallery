@@ -9,6 +9,13 @@ This repo has extended the concept to include the following features
 - Uploading both videos and photos
 - Upload multiple files at a time
 - Some simple sorting and filtering
+- Client side image resize for thumbnail
+
+Example site here https://myloveydove.com/?password=nottherealpassword for our
+amazing dog dixie (RIP)
+
+Adding `?password=nottherealpassword` let's you see the upload buttons but will
+not let you actually post (see #security section)
 
 ## Architecture
 
@@ -44,17 +51,88 @@ This repo has extended the concept to include the following features
 
 The process of making this was pretty involved so I made several blogposts about it
 
-- Part 1: Initial experimentation with serverless architecture following the AWS tutorial https://searchvoidstar.tumblr.com/post/638408397901987840/making-a-serverless-website-for-photo-upload-pt-1
+- Part 1: Initial experimentation with serverless architecture following the
+  AWS tutorial
+  https://searchvoidstar.tumblr.com/post/638408397901987840/making-a-serverless-website-for-photo-upload-pt-1
 
-- Part 2: Converting the Vue demo code to React and demo lambda+cloudformation template https://searchvoidstar.tumblr.com/post/638602799897329664/making-a-serverless-website-for-photo-and-video
+- Part 2: Converting the Vue demo code to React and demo lambda+cloudformation
+  template
+  https://searchvoidstar.tumblr.com/post/638602799897329664/making-a-serverless-website-for-photo-and-video
 
-- Part 3: registering a domain, using Route 53, and making the S3 static website hooked up to CloudFront to make it https compatible https://searchvoidstar.tumblr.com/post/638618421776515072/making-a-https-accessible-s3-powered-static-site
+- Part 3: registering a domain, using Route 53, and making the S3 static
+  website hooked up to CloudFront to make it https compatible
+  https://searchvoidstar.tumblr.com/post/638618421776515072/making-a-https-accessible-s3-powered-static-site
+
+### Security
+
+The app only allows someone who visits the page with a special URL format e.g.
+`?password=yourSecretPassword` to upload files and post comments. Users without
+the right password are not be able to post comments or upload files. Having the
+password helps prevents drive by spam that would be otherwise hard to moderate
+
+If the password URL parameter is not supplied, the buttons for uploading are
+hidden, but if it is supplied they are shown. It still has to match the server
+side secret password to succeed posting
+
+### Deployment
+
+Install the aws-sam CLI
 
 ```
 
+brew tap aws/tap
+brew install aws-sam-cli
+brew install aws-sam-cli ## currently there is a bug in homebrew where the install must be run twice
+
 ```
 
-### Note
+Then use the command
 
-There is no security on this app, it is meant for a small circle of friends to
-trust, so that is an exercise for the reader (PRs also welcome)
+```
+
+sam deploy --guided
+
+```
+
+You can specify the SecretPassword in the guided mode
+
+### What does the deployment do
+
+The deployment will automatically do the following
+
+- Creates lambda functions for posting/reading files and comments
+- Creates dynamodb tables for guestbook and files
+- Creates an s3 bucket that it puts the photos in. It has a coded name like
+  `sam-app-s3uploadbucket-1fyrebt7g2tr3`
+
+Then also update frontend/package.json to do `aws s3 sync` to your website
+bucket, and run `yarn deploy`. Note that your website bucket should be
+different from the one automatically created by the aws sam template.yaml here
+
+## Database design
+
+This code uses a simple DynamoDB database. I considered using Amazon RDS (e.g.
+a real database instead of dynamoDB) but the administration was too
+complicated, and so instead I updated the DynamoDB to have comments for the
+files directly inside the files table. Storing them separately would imply a
+join which DynamoDB does not have
+
+## Scalability
+
+The client side currently fetches all photo JSON info and comments for all the
+pages of the app in one query. Only the actual img tags on the page download at
+a given time though. Unless you have a very large number of photos this is
+probably fine. Doing pagination properly would require making a paginated
+DynamoDB query but it doesn't use standard LIMIT/OFFSET so it's a little quirky
+
+## Credits
+
+I used a ton of amazing gifs from https://gifcities.org/ and a couple other
+places. Thank you to the creators of all those gifs and the internet historians
+preserving them. There are many other thanks to give but I'm just grateful to
+share :)
+
+## Note
+
+If you are interested in using this and need help, particularly if you want to
+use it for a memorial page, feel free to contact me

@@ -11,16 +11,17 @@ import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import Select from "@material-ui/core/Select";
 import Button from "@material-ui/core/Button";
-
-import {
-  NumberParam,
-  StringParam,
-  useQueryParam,
-  withDefault,
-} from "use-query-params";
-
 import PublishIcon from "@material-ui/icons/Publish";
 import CreateIcon from "@material-ui/icons/Create";
+import { NumberParam, StringParam, useQueryParam } from "use-query-params";
+
+//@ts-ignore
+import ImageBlobReduce from "image-blob-reduce";
+//@ts-ignore
+import Pica from "pica";
+
+const pica = Pica({ features: ["js", "wasm", "cib"] });
+const reduce = new ImageBlobReduce({ pica });
 
 // generated with ls | jq -R -s -c 'split("\n")[:-1]' > gifs.json
 import gifs from "./gifs.json";
@@ -125,6 +126,7 @@ function CommentForm({
   const [error, setError] = useState();
   const [user, setUser] = useState("");
   const [message, setMessage] = useState("");
+  const [password] = useQueryParam("password", StringParam);
   const classes = useStyles();
 
   return (
@@ -161,8 +163,8 @@ function CommentForm({
               const data = new FormData();
               data.append("message", message);
               data.append("user", user);
-              data.append("date", new Date().toLocaleString());
               data.append("filename", filename);
+              data.append("password", password || "");
               await myfetchjson(API_ENDPOINT + "/postComment", {
                 method: "POST",
                 body: data,
@@ -189,6 +191,7 @@ function PictureDialog({ onClose, file }: { onClose: Function; file?: File }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState();
   const [counter, setCounter] = useState(0);
+  const [password] = useQueryParam("password", StringParam);
   const classes = useStyles();
 
   const handleClose = () => {
@@ -245,7 +248,7 @@ function PictureDialog({ onClose, file }: { onClose: Function; file?: File }) {
               })}
           </div>
         ) : null}
-        {file ? (
+        {file && password ? (
           <CommentForm
             filename={file.filename}
             forceRefresh={() => setCounter(counter + 1)}
@@ -266,6 +269,7 @@ function GuestbookDialog({
   const [error, setError] = useState<Error>();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>("");
+  const [password] = useQueryParam("password", StringParam);
   const [user, setUser] = useState<string>("");
 
   const handleClose = () => {
@@ -310,6 +314,7 @@ function GuestbookDialog({
                   const data = new FormData();
                   data.append("message", message);
                   data.append("user", user);
+                  data.append("password", password || "");
                   await myfetchjson(API_ENDPOINT + "/postGuestbookComment", {
                     method: "POST",
                     body: data,
@@ -356,6 +361,7 @@ function UploadDialog({
   const [completed, setCompleted] = useState(0);
   const [user, setUser] = useState("");
   const [message, setMessage] = useState("");
+  const [password] = useQueryParam("password", StringParam);
   const classes = useStyles();
 
   const handleClose = () => {
@@ -424,11 +430,20 @@ function UploadDialog({
                     data.append("user", user);
                     data.append("filename", image.name);
                     data.append("contentType", image.type);
+                    data.append("password", password || "");
                     const res = await myfetchjson(API_ENDPOINT + "/postFile", {
                       method: "POST",
                       body: data,
                     });
-
+                    if (res.uploadThumbnailURL) {
+                      const reducedImage = await reduce.toBlob(image, {
+                        max: 500,
+                      });
+                      await myfetch(res.uploadThumbnailURL, {
+                        method: "PUT",
+                        body: reducedImage,
+                      });
+                    }
                     await myfetch(res.uploadURL, {
                       method: "PUT",
                       body: image,
@@ -471,6 +486,7 @@ function Guestbook({ className }: { className?: string }) {
   const [posts, setPosts] = useState<Item[]>();
   const [writing, setWriting] = useState(false);
   const [error, setError] = useState<Error>();
+  const [password] = useQueryParam("password", StringParam);
   const [counter, forceUpdate] = useReducer((x) => x + 1, 0);
 
   useEffect(() => {
@@ -503,14 +519,16 @@ function Guestbook({ className }: { className?: string }) {
             </div>
           ))
         ) : null}
-        <IconButton
-          color="secondary"
-          size="small"
-          onClick={() => setWriting(true)}
-        >
-          write a msg
-          <CreateIcon />
-        </IconButton>
+        {password ? (
+          <IconButton
+            color="secondary"
+            size="small"
+            onClick={() => setWriting(true)}
+          >
+            write a msg
+            <CreateIcon />
+          </IconButton>
+        ) : null}
       </div>
 
       <GuestbookDialog
@@ -550,7 +568,17 @@ function Media({
     <figure style={{ display: "inline-block" }}>
       <picture>
         {contentType.startsWith("video") ? (
-          <video style={style} src={src} controls onClick={onClick as any} />
+          <video
+            style={style}
+            src={src}
+            controls
+            onClick={(event) => {
+              if (onClick) {
+                onClick(event);
+                event.preventDefault();
+              }
+            }}
+          />
         ) : (
           <img style={style} src={src} onClick={onClick as any} />
         )}
@@ -567,6 +595,7 @@ function Gallery({ children }: { children: React.ReactNode }) {
   const [initialStart, setParamStart] = useQueryParam("start", NumberParam);
   const [initialSort, setSortParam] = useQueryParam("sort", StringParam);
   const [initialFilter, setFilterParam] = useQueryParam("filter", StringParam);
+  const [password] = useQueryParam("password", StringParam);
   const [counter, setCounter] = useState(0);
   const [filter, setFilter] = useState(initialFilter || "all");
   const [sort, setSort] = useState(initialSort || "date_uploaded_asc");
@@ -647,14 +676,16 @@ function Gallery({ children }: { children: React.ReactNode }) {
           <MenuItem value={"date_uploaded_dec"}>date uploaded (dec)</MenuItem>
         </Select>
         <br />
-        <IconButton
-          color="primary"
-          size="small"
-          onClick={() => setUploading(true)}
-        >
-          add a dixie pic/video
-          <PublishIcon />
-        </IconButton>
+        {password ? (
+          <IconButton
+            color="primary"
+            size="small"
+            onClick={() => setUploading(true)}
+          >
+            add a dixie pic/video
+            <PublishIcon />
+          </IconButton>
+        ) : null}
       </div>
 
       <UploadDialog
@@ -694,14 +725,19 @@ function Gallery({ children }: { children: React.ReactNode }) {
           return (
             <React.Fragment key={JSON.stringify(file)}>
               <Media
-                file={file}
+                file={{
+                  ...file,
+                  filename:
+                    (file.contentType.startsWith("image") ? "thumbnail-" : "") +
+                    file.filename,
+                }}
                 onClick={() => {
                   setDialogFile(file);
                 }}
                 style={style}
               >
                 {user || message
-                  ? `${user ? user + " " : ""}${message ? " - " + message : ""}`
+                  ? `${user ? user + " - " : ""}${message ? message : ""}`
                   : ""}{" "}
                 posted {new Date(timestamp).toLocaleString()}{" "}
                 <Link

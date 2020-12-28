@@ -17,27 +17,36 @@ exports.handler = async (event) => {
 const getUploadURL = async function (event) {
   try {
     const data = multipart.parse(event);
-    const { filename, contentType, user, message } = data;
+    const { filename, contentType, user, message, password } = data;
+    if (password !== process.env.Password) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ message: "Access denied" }),
+      };
+    }
     const timestamp = +Date.now();
     const Key = `${timestamp}-${filename}`;
 
-    // Get signed URL from S3
-    const s3Params = {
+    const uploadThumbnailURL = contentType.startsWith("image")
+      ? await s3.getSignedUrlPromise("putObject", {
+          Bucket: process.env.UploadBucket,
+          Key: `thumbnail-${Key}`,
+          Expires: URL_EXPIRATION_SECONDS,
+          ContentType: contentType,
+          ACL: "public-read",
+        })
+      : undefined;
+
+    const uploadURL = await s3.getSignedUrlPromise("putObject", {
       Bucket: process.env.UploadBucket,
       Key,
       Expires: URL_EXPIRATION_SECONDS,
       ContentType: contentType,
-
-      // This ACL makes the uploaded object publicly readable. You must also uncomment
-      // the extra permission for the Lambda function in the SAM template.
-
       ACL: "public-read",
-    };
-
-    const uploadURL = await s3.getSignedUrlPromise("putObject", s3Params);
+    });
 
     await DB.put({
-      TableName: "myfiles",
+      TableName: "files",
       Item: {
         timestamp,
         filename: Key,
@@ -49,6 +58,7 @@ const getUploadURL = async function (event) {
 
     return JSON.stringify({
       uploadURL,
+      uploadThumbnailURL,
       Key,
     });
   } catch (e) {

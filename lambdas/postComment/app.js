@@ -14,7 +14,7 @@ async function uploadComment({ message, user, filename }) {
     filename,
   };
   return DB.update({
-    TableName: "myfiles",
+    TableName: "files",
     Key: {
       filename,
     },
@@ -34,7 +34,14 @@ async function uploadComment({ message, user, filename }) {
 exports.handler = async (event) => {
   try {
     const data = multipart.parse(event);
-    const { message, user, filename } = data;
+    const { message, user, filename, password } = data;
+
+    if (password !== process.env.Password) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ message: "Access denied" }),
+      };
+    }
     await uploadComment({ message, user, filename });
 
     return {

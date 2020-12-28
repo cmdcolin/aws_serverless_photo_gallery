@@ -7,7 +7,7 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 
 const getItems = async function ({ startKey }) {
   const params = {
-    TableName: "myfiles",
+    TableName: "files",
   };
 
   return docClient.scan(params).promise();

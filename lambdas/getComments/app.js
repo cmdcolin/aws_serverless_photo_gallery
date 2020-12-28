@@ -8,7 +8,7 @@ exports.handler = async (event) => {
     const { filename } = event.queryStringParameters;
     const result = await docClient
       .scan({
-        TableName: "myfiles",
+        TableName: "files",
         FilterExpression: "#filename = :filename",
         ExpressionAttributeNames: {
           "#filename": "filename",

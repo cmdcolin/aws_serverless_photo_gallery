@@ -15,7 +15,7 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
-      TableName: "myfiles"
+      TableName: "files"
 
   guestbookDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -30,12 +30,9 @@ Resources:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
       TableName: "guestbook"
-  # HTTP API
   MyApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      # CORS configuration - this is open for development only and should be restricted in prod.
-      # See https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-httpapi-httpapicorsconfiguration.html
       CorsConfiguration:
         AllowMethods:
           - GET
@@ -58,6 +55,7 @@ Resources:
       Environment:
         Variables:
           UploadBucket: !Ref S3UploadBucket
+          Password: !Ref SecretPassword
       Policies:
         - AmazonDynamoDBFullAccess
         - S3WritePolicy:
@@ -83,6 +81,9 @@ Resources:
       Runtime: nodejs12.x
       Timeout: 3
       MemorySize: 128
+      Environment:
+        Variables:
+          Password: !Ref SecretPassword
       Policies:
         - AmazonDynamoDBFullAccess
       Events:
@@ -119,6 +120,9 @@ Resources:
       Runtime: nodejs12.x
       Timeout: 3
       MemorySize: 128
+      Environment:
+        Variables:
+          Password: !Ref SecretPassword
       Policies:
         - AmazonDynamoDBFullAccess
       Events:
@@ -188,3 +192,8 @@ Outputs:
   S3UploadBucketName:
     Description: "S3 bucket for application uploads"
     Value: !Ref "S3UploadBucket"
+
+Parameters:
+  SecretPassword:
+    Type: String
+    Default: password

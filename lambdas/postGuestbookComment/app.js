@@ -7,7 +7,14 @@ const DB = new AWS.DynamoDB.DocumentClient();
 exports.handler = async (event) => {
   try {
     const data = multipart.parse(event);
-    const { message, user } = data;
+    const { message, user, password } = data;
+
+    if (password !== process.env.Password) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ message: "Access denied" }),
+      };
+    }
     await DB.put({
       Item: {
         timestamp: Date.now(),
