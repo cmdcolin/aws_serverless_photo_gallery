@@ -15,6 +15,7 @@
     "@types/pica": "^5.1.2",
     "@types/react": "^16.9.53",
     "@types/react-dom": "^16.9.8",
+    "exifreader": "^3.12.6",
     "image-blob-reduce": "^2.2.0",
     "pica": "^6.1.1",
     "query-string": "^6.13.7",

@@ -14,6 +14,7 @@ import Button from "@material-ui/core/Button";
 import PublishIcon from "@material-ui/icons/Publish";
 import CreateIcon from "@material-ui/icons/Create";
 import { NumberParam, StringParam, useQueryParam } from "use-query-params";
+import ExifReader from "exifreader";
 
 import ImageBlobReduce from "image-blob-reduce";
 import Pica from "pica";
@@ -34,6 +35,12 @@ const PAGE_SIZE = 10;
 const API_ENDPOINT = "https://fjgbqj4324.execute-api.us-east-2.amazonaws.com";
 const BUCKET =
   "https://sam-app-s3uploadbucket-1fyrebt7g2tr3.s3.us-east-2.amazonaws.com";
+
+//from https://stackoverflow.com/questions/43083993/javascript-how-to-convert-exif-date-time-data-to-timestamp
+const parseExifDate = (s: string) => {
+  const [year, month, date, hour, min, sec] = s.split(/\D/);
+  return new Date(+year, +month - 1, +date, +hour, +min, +sec);
+};
 
 const useStyles = makeStyles(() => ({
   app: {
@@ -425,12 +432,41 @@ function UploadDialog({
                   setCompleted(0);
                   setTotal(images.length);
                   for (const image of Array.from(images)) {
+                    const exifData: {
+                      DateTime?: { description: string };
+                    } = await new Promise((resolve, reject) => {
+                      var reader = new FileReader();
+
+                      reader.onload = function (e) {
+                        if (e.target && e.target.result) {
+                          try {
+                            resolve(
+                              ExifReader.load(e.target.result as ArrayBuffer)
+                            );
+                          } catch (e) {
+                            /* swallow error because exif error not that important maybe */
+                          }
+                        }
+                        resolve({});
+                      };
+                      reader.onerror = reject;
+                      reader.readAsArrayBuffer(image);
+                    });
+
                     const data = new FormData();
                     data.append("message", message);
                     data.append("user", user);
                     data.append("filename", image.name);
                     data.append("contentType", image.type);
                     data.append("password", password || "");
+
+                    if (exifData.DateTime) {
+                      const exifTimestamp = +parseExifDate(
+                        exifData.DateTime.description
+                      );
+                      data.append("exifTimestamp", `${exifTimestamp}`);
+                    }
+
                     const res = await myfetchjson(API_ENDPOINT + "/postFile", {
                       method: "POST",
                       body: data,
@@ -512,8 +548,8 @@ function Guestbook({ className }: { className?: string }) {
           posts.map((post) => (
             <div className={classes.post} key={JSON.stringify(post)}>
               <div className="user">
-                {post.user} wrote on {new Date(post.timestamp).toLocaleString()}
-                :
+                {post.user} wrote on{" "}
+                {new Date(post.timestamp).toLocaleDateString()}:
               </div>
               <div className="message">{post.message}</div>
             </div>
@@ -550,6 +586,7 @@ interface File {
   date: string;
   contentType: string;
   comments: unknown[];
+  exifTimestamp: number;
 }
 function Media({
   file,
@@ -631,12 +668,23 @@ function Gallery({ children }: { children: React.ReactNode }) {
   }, [files, filter]);
 
   const fileList = useMemo(() => {
+    const future = +new Date("3000");
     if (filteredFiles) {
       if (sort === "date_uploaded_asc") {
         return filteredFiles.sort((a, b) => b.timestamp - a.timestamp);
       }
       if (sort === "date_uploaded_dec") {
         return filteredFiles.sort((a, b) => a.timestamp - b.timestamp);
+      }
+      if (sort === "date_exif_asc") {
+        return filteredFiles.sort(
+          (a, b) => (b.exifTimestamp || 0) - (a.exifTimestamp || 0)
+        );
+      }
+      if (sort === "date_exif_dec") {
+        return filteredFiles.sort(
+          (a, b) => (a.exifTimestamp || future) - (b.exifTimestamp || future)
+        );
       }
       if (sort === "random") {
         return shuffle(filteredFiles);
@@ -674,6 +722,8 @@ function Gallery({ children }: { children: React.ReactNode }) {
           }}
         >
           <MenuItem value={"random"}>random</MenuItem>
+          <MenuItem value={"date_exif_asc"}>exif date (asc)</MenuItem>
+          <MenuItem value={"date_exif_dec"}>exif date (dec)</MenuItem>
           <MenuItem value={"date_uploaded_asc"}>date uploaded (asc)</MenuItem>
           <MenuItem value={"date_uploaded_dec"}>date uploaded (dec)</MenuItem>
         </Select>
@@ -708,7 +758,13 @@ function Gallery({ children }: { children: React.ReactNode }) {
         <div className={classes.error}>{`${error}`}</div>
       ) : fileList ? (
         fileList.slice(start, start + PAGE_SIZE).map((file) => {
-          const { user, comments = [], message, timestamp } = file;
+          const {
+            user,
+            comments = [],
+            message,
+            timestamp,
+            exifTimestamp,
+          } = file;
           const token = myimages[Math.floor(Math.random() * myimages.length)];
           const border =
             myborders[Math.floor(Math.random() * myborders.length)];
@@ -741,7 +797,10 @@ function Gallery({ children }: { children: React.ReactNode }) {
                 {user || message
                   ? `${user ? user + " - " : ""}${message ? message : ""}`
                   : ""}{" "}
-                posted {new Date(timestamp).toLocaleString()}{" "}
+                posted {new Date(timestamp).toLocaleDateString()}{" "}
+                {exifTimestamp
+                  ? `/ taken ${new Date(exifTimestamp).toLocaleDateString()}`
+                  : ""}
                 <Link
                   href="#"
                   onClick={() => {

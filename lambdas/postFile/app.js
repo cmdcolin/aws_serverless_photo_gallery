@@ -17,7 +17,14 @@ exports.handler = async (event) => {
 const getUploadURL = async function (event) {
   try {
     const data = multipart.parse(event);
-    const { filename, contentType, user, message, password } = data;
+    const {
+      filename,
+      contentType,
+      user,
+      message,
+      password,
+      exifTimestamp,
+    } = data;
     if (password !== process.env.Password) {
       return {
         statusCode: 403,
@@ -53,6 +60,7 @@ const getUploadURL = async function (event) {
         message,
         user,
         contentType,
+        exifTimestamp: +exifTimestamp,
       },
     }).promise();
 
