@@ -5,7 +5,7 @@ const { AWS_REGION: region } = process.env;
 
 const docClient = new AWS.DynamoDB.DocumentClient();
 
-const getItems = async function ({ startKey }) {
+const getItems = async function () {
   const params = {
     TableName: "files",
   };
@@ -15,8 +15,7 @@ const getItems = async function ({ startKey }) {
 
 exports.handler = async (event) => {
   try {
-    const { startKey } = event.queryStringParameters || {};
-    const result = await getItems({ startKey });
+    const result = await getItems();
     return {
       statusCode: 200,
       body: JSON.stringify(result),
