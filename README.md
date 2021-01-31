@@ -118,6 +118,9 @@ complicated, and so instead I updated the DynamoDB to have comments for the
 files directly inside the files table. Storing them separately would imply a
 join which DynamoDB does not have
 
+Note that there was a nice recommendation on reddit to use a specialized keys
+in DynamoDB to help avoid these problems. See https://github.com/cmdcolin/aws_serverless_photo_gallery/issues/8
+
 ## Scalability
 
 The client side currently fetches all photo JSON info and comments for all the
