@@ -80,19 +80,13 @@ side secret password to succeed posting
 Install the aws-sam CLI
 
 ```
-
-brew tap aws/tap
-brew install aws-sam-cli
-brew install aws-sam-cli ## currently there is a bug in homebrew where the install must be run twice
-
+brew install aws/tap/aws-sam-cli
 ```
 
 Then use the command
 
 ```
-
 sam deploy --guided
-
 ```
 
 You can specify the SecretPassword in the guided mode
