@@ -1,10 +1,10 @@
 // eslint-disable-next-line import/no-unresolved
-const AWS = require("aws-sdk");
-const multipart = require("./multipart");
+const AWS = require('aws-sdk')
+const multipart = require('./multipart')
 
-// const { AWS_REGION: region } = process.env;
+const { AWS_REGION: region } = process.env
 
-const DB = new AWS.DynamoDB.DocumentClient();
+const DB = new AWS.DynamoDB.DocumentClient()
 
 async function uploadComment({ message, user, filename }) {
   const comment = {
@@ -12,46 +12,46 @@ async function uploadComment({ message, user, filename }) {
     message,
     user,
     filename,
-  };
+  }
   return DB.update({
-    TableName: "files",
+    TableName: 'files',
     Key: {
       filename,
     },
-    ReturnValues: "ALL_NEW",
+    ReturnValues: 'ALL_NEW',
     UpdateExpression:
-      "SET #comments = list_append(if_not_exists(#comments, :empty_list), :comment)",
+      'SET #comments = list_append(if_not_exists(#comments, :empty_list), :comment)',
     ExpressionAttributeNames: {
-      "#comments": "comments",
+      '#comments': 'comments',
     },
     ExpressionAttributeValues: {
-      ":comment": [comment],
-      ":empty_list": [],
+      ':comment': [comment],
+      ':empty_list': [],
     },
-  }).promise();
+  }).promise()
 }
 
-exports.handler = async (event) => {
+exports.handler = async event => {
   try {
-    const data = multipart.parse(event);
-    const { message, user, filename, password } = data;
+    const data = multipart.parse(event)
+    const { message, user, filename, password } = data
 
     if (password !== process.env.Password) {
       return {
         statusCode: 403,
-        body: JSON.stringify({ message: "Access denied" }),
-      };
+        body: JSON.stringify({ message: 'Access denied' }),
+      }
     }
-    await uploadComment({ message, user, filename });
+    await uploadComment({ message, user, filename })
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: "true" }),
-    };
+      body: JSON.stringify({ success: 'true' }),
+    }
   } catch (e) {
     return {
       statusCode: 500,
       body: JSON.stringify({ message: `${e}` }),
-    };
+    }
   }
-};
+}
