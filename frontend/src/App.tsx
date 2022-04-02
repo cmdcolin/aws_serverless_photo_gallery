@@ -51,18 +51,7 @@ const useStyles = makeStyles(() => ({
     textAlign: 'center',
     padding: '0.5em',
   },
-  embeddedGuestbook: {
-    display: 'block',
-    borderStyle: 'solid',
-    borderColor: 'black',
-    borderWidth: '0 0 1px 1px',
-    borderRadius: 25,
-    position: 'relative',
-    float: 'right',
-    width: '25%',
-    minWidth: 300,
-    padding: '1em',
-  },
+
   posts: {
     background: '#ddd',
   },
@@ -270,94 +259,6 @@ function PictureDialog({ onClose, file }: { onClose: Function; file?: File }) {
   )
 }
 
-function GuestbookDialog({
-  open,
-  onClose,
-}: {
-  open: boolean
-  onClose: () => void
-}) {
-  const [error, setError] = useState<unknown>()
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<string>('')
-  const [password] = useQueryParam('password', StringParam)
-  const [user, setUser] = useState<string>('')
-
-  const handleClose = () => {
-    setError(undefined)
-    onClose()
-  }
-
-  return (
-    <Dialog onClose={handleClose} open={open}>
-      <DialogTitle>write a message about dixie</DialogTitle>
-
-      <DialogContent>
-        <label htmlFor="user">Your name:</label>
-        <input
-          id="user"
-          type="text"
-          value={user}
-          onChange={event => setUser(event.target.value)}
-        />
-        <br />
-        <label htmlFor="message">Message</label>
-        <textarea
-          id="message"
-          rows={10}
-          value={message}
-          style={{ width: '100%' }}
-          onChange={event => setMessage(event.target.value)}
-        />
-
-        {loading ? 'Uploading...' : null}
-        {error ? <div className="error">{`${error}`}</div> : null}
-
-        <DialogActions>
-          <Button
-            style={{ textTransform: 'none' }}
-            disabled={loading}
-            onClick={async () => {
-              try {
-                if (user || message) {
-                  setLoading(true)
-
-                  const data = new FormData()
-                  data.append('message', message)
-                  data.append('user', user)
-                  data.append('password', password || '')
-                  await myfetchjson(API_ENDPOINT + '/postGuestbookComment', {
-                    method: 'POST',
-                    body: data,
-                  })
-
-                  setTimeout(() => {
-                    handleClose()
-                  }, 500)
-                }
-              } catch (e) {
-                setError(e)
-              } finally {
-                setLoading(false)
-              }
-            }}
-            color="primary"
-          >
-            submit
-          </Button>
-          <Button
-            onClick={handleClose}
-            color="primary"
-            style={{ textTransform: 'none' }}
-          >
-            cancel
-          </Button>
-        </DialogActions>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 function UploadDialog({
   open,
   onClose,
@@ -526,65 +427,6 @@ interface Item {
   timestamp: number
 }
 
-function Guestbook({ className }: { className?: string }) {
-  const classes = useStyles()
-  const [posts, setPosts] = useState<Item[]>()
-  const [writing, setWriting] = useState(false)
-  const [error, setError] = useState<unknown>()
-  const [password] = useQueryParam('password', StringParam)
-  const [counter, forceUpdate] = useReducer(x => x + 1, 0)
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const result = await myfetchjson(API_ENDPOINT + '/getGuestbookComments')
-        setPosts(result.Items)
-      } catch (e) {
-        setError(e)
-      }
-    })()
-  }, [counter])
-
-  return (
-    <div className={className}>
-      <h2>Guestbook</h2>
-      <div>
-        {error ? (
-          <div className="error">{`${error}`}</div>
-        ) : posts ? (
-          posts.map(post => (
-            <div className={classes.post} key={JSON.stringify(post)}>
-              <div className="user">
-                {post.user} wrote on{' '}
-                {new Date(post.timestamp).toLocaleDateString()}:
-              </div>
-              <div className="message">{post.message}</div>
-            </div>
-          ))
-        ) : null}
-        {password ? (
-          <IconButton
-            color="secondary"
-            size="small"
-            onClick={() => setWriting(true)}
-          >
-            write a msg
-            <CreateIcon />
-          </IconButton>
-        ) : null}
-      </div>
-
-      <GuestbookDialog
-        open={writing}
-        onClose={() => {
-          setWriting(false)
-          forceUpdate()
-        }}
-      />
-    </div>
-  )
-}
-
 interface File {
   timestamp: number
   filename: string
@@ -645,7 +487,7 @@ function getCaption(file: File) {
   }`
 }
 
-function Gallery({ children }: { children: React.ReactNode }) {
+function Gallery() {
   const [files, setFiles] = useState<File[]>()
   const [error, setError] = useState<unknown>()
   const [uploading, setUploading] = useState(false)
@@ -720,7 +562,6 @@ function Gallery({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={classes.gallery}>
-      {children}
       <div>
         <h2>Dixies</h2>
         <p>Click image to open full size</p>
@@ -915,27 +756,13 @@ function Header() {
 
 function App() {
   const classes = useStyles()
-  const [width, setWidth] = useState(window.innerWidth)
-  const breakpoint = 700
-
-  useEffect(() => {
-    const handleWindowResize = () => setWidth(window.innerWidth)
-    window.addEventListener('resize', handleWindowResize)
-
-    return () => window.removeEventListener('resize', handleWindowResize)
-  }, [])
 
   return (
     <div className={classes.app}>
       <Header />
 
       <div>
-        <Gallery>
-          {width > breakpoint ? (
-            <Guestbook className={classes.embeddedGuestbook} />
-          ) : null}
-        </Gallery>
-        {width < breakpoint ? <Guestbook /> : null}
+        <Gallery />
       </div>
       <div
         style={{
