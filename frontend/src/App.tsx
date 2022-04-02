@@ -35,9 +35,9 @@ const myimages = shuffle(gifs)
 const myborders = shuffle(borders)
 
 const PAGE_SIZE = 10
-const API_ENDPOINT = 'https://fjgbqj4324.execute-api.us-east-2.amazonaws.com'
+const API_ENDPOINT = 'https://to45rgws05.execute-api.us-east-2.amazonaws.com/'
 const BUCKET =
-  'https://sam-app-s3uploadbucket-1fyrebt7g2tr3.s3.us-east-2.amazonaws.com'
+  'https://myloveydove-s3uploadbucket-wehl1ofnm65a.s3.us-east-2.amazonaws.com'
 
 //from https://stackoverflow.com/questions/43083993/javascript-how-to-convert-exif-date-time-data-to-timestamp
 const parseExifDate = (s: string) => {
@@ -174,7 +174,7 @@ function CommentForm({
               data.append('user', user)
               data.append('filename', filename)
               data.append('password', password || '')
-              await myfetchjson(API_ENDPOINT + '/postComment', {
+              await myfetchjson(API_ENDPOINT + '/postDixieComment', {
                 method: 'POST',
                 body: data,
               })
@@ -214,7 +214,7 @@ function PictureDialog({ onClose, file }: { onClose: Function; file?: File }) {
       try {
         if (file) {
           const result = await myfetchjson(
-            API_ENDPOINT + `/getComments?filename=${file?.filename}`,
+            API_ENDPOINT + `/getDixieComments?filename=${file?.filename}`,
           )
           setComments(result)
         }
@@ -473,10 +473,13 @@ function UploadDialog({
                       data.append('exifTimestamp', `${+new Date('1960')}`)
                     }
 
-                    const res = await myfetchjson(API_ENDPOINT + '/postFile', {
-                      method: 'POST',
-                      body: data,
-                    })
+                    const res = await myfetchjson(
+                      API_ENDPOINT + '/postDixieFile',
+                      {
+                        method: 'POST',
+                        body: data,
+                      },
+                    )
                     if (res.uploadThumbnailURL) {
                       const reducedImage = await reduce.toBlob(image, {
                         max: 500,
@@ -662,7 +665,7 @@ function Gallery({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     ;(async () => {
       try {
-        const result = await myfetchjson(API_ENDPOINT + '/getFiles')
+        const result = await myfetchjson(API_ENDPOINT + '/getDixieFiles')
         setFiles(result.Items)
       } catch (e) {
         setError(e)

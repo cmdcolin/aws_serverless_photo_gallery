@@ -1,59 +1,53 @@
-"use strict";
+'use strict'
 
-const AWS = require("aws-sdk");
-const multipart = require("./multipart");
+const AWS = require('aws-sdk')
+const multipart = require('./multipart')
 
-const s3 = new AWS.S3();
-const DB = new AWS.DynamoDB.DocumentClient();
+const s3 = new AWS.S3()
+const DB = new AWS.DynamoDB.DocumentClient()
 
 // Change this value to adjust the signed URL's expiration
-const URL_EXPIRATION_SECONDS = 300;
+const URL_EXPIRATION_SECONDS = 300
 
 // Main Lambda entry point
-exports.handler = async (event) => {
-  return await getUploadURL(event);
-};
+exports.handler = async event => {
+  return await getUploadURL(event)
+}
 
 const getUploadURL = async function (event) {
   try {
-    const data = multipart.parse(event);
-    const {
-      filename,
-      contentType,
-      user,
-      message,
-      password,
-      exifTimestamp,
-    } = data;
+    const data = multipart.parse(event)
+    const { filename, contentType, user, message, password, exifTimestamp } =
+      data
     if (password !== process.env.Password) {
       return {
         statusCode: 403,
-        body: JSON.stringify({ message: "Access denied" }),
-      };
+        body: JSON.stringify({ message: 'Access denied' }),
+      }
     }
-    const timestamp = +Date.now();
-    const Key = `${timestamp}-${filename}`;
+    const timestamp = +Date.now()
+    const Key = `${timestamp}-${filename}`
 
-    const uploadThumbnailURL = contentType.startsWith("image")
-      ? await s3.getSignedUrlPromise("putObject", {
+    const uploadThumbnailURL = contentType.startsWith('image')
+      ? await s3.getSignedUrlPromise('putObject', {
           Bucket: process.env.UploadBucket,
           Key: `thumbnail-${Key}`,
           Expires: URL_EXPIRATION_SECONDS,
           ContentType: contentType,
-          ACL: "public-read",
+          ACL: 'public-read',
         })
-      : undefined;
+      : undefined
 
-    const uploadURL = await s3.getSignedUrlPromise("putObject", {
+    const uploadURL = await s3.getSignedUrlPromise('putObject', {
       Bucket: process.env.UploadBucket,
       Key,
       Expires: URL_EXPIRATION_SECONDS,
       ContentType: contentType,
-      ACL: "public-read",
-    });
+      ACL: 'public-read',
+    })
 
     await DB.put({
-      TableName: "files",
+      TableName: 'files',
       Item: {
         timestamp,
         filename: Key,
@@ -62,18 +56,18 @@ const getUploadURL = async function (event) {
         contentType,
         exifTimestamp: +exifTimestamp,
       },
-    }).promise();
+    }).promise()
 
     return JSON.stringify({
       uploadURL,
       uploadThumbnailURL,
       Key,
-    });
+    })
   } catch (e) {
     const response = {
       statusCode: 500,
       body: JSON.stringify({ message: `${e}` }),
-    };
-    return response;
+    }
+    return response
   }
-};
+}

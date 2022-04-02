@@ -1,19 +1,19 @@
 // eslint-disable-next-line import/no-unresolved
-const AWS = require("aws-sdk");
-const multipart = require("./multipart");
+const AWS = require('aws-sdk')
+const multipart = require('./multipart')
 
-const DB = new AWS.DynamoDB.DocumentClient();
+const DB = new AWS.DynamoDB.DocumentClient()
 
-exports.handler = async (event) => {
+exports.handler = async event => {
   try {
-    const data = multipart.parse(event);
-    const { message, user, password } = data;
+    const data = multipart.parse(event)
+    const { message, user, password } = data
 
     if (password !== process.env.Password) {
       return {
         statusCode: 403,
-        body: JSON.stringify({ message: "Access denied" }),
-      };
+        body: JSON.stringify({ message: 'Access denied' }),
+      }
     }
     await DB.put({
       Item: {
@@ -21,17 +21,17 @@ exports.handler = async (event) => {
         message,
         user,
       },
-      TableName: "guestbook",
-    }).promise();
+      TableName: 'guestbook',
+    }).promise()
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: "true" }),
-    };
+      body: JSON.stringify({ success: 'true' }),
+    }
   } catch (e) {
     return {
       statusCode: 500,
       body: JSON.stringify({ message: `${e}` }),
-    };
+    }
   }
-};
+}
