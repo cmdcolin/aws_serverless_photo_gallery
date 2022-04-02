@@ -47,9 +47,9 @@ Resources:
   UploadRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/postFile/
+      CodeUri: lambdas/postDixieFile/
       Handler: app.handler
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 3
       MemorySize: 128
       Environment:
@@ -69,7 +69,7 @@ Resources:
         UploadAssetAPI:
           Type: HttpApi
           Properties:
-            Path: /postFile
+            Path: /postDixieFile
             Method: post
             ApiId: !Ref MyApi
 
@@ -78,7 +78,7 @@ Resources:
     Properties:
       CodeUri: lambdas/postGuestbookComment/
       Handler: app.handler
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 3
       MemorySize: 128
       Environment:
@@ -99,7 +99,7 @@ Resources:
     Properties:
       CodeUri: lambdas/getGuestbookComments/
       Handler: app.handler
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 3
       MemorySize: 128
       Policies:
@@ -115,9 +115,9 @@ Resources:
   CommentPostFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/postComment/
+      CodeUri: lambdas/postDixieComment/
       Handler: app.handler
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 3
       MemorySize: 128
       Environment:
@@ -129,16 +129,16 @@ Resources:
         UploadAssetAPI:
           Type: HttpApi
           Properties:
-            Path: /postComment
+            Path: /postDixieComment
             Method: post
             ApiId: !Ref MyApi
 
   CommentReadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/getComments/
+      CodeUri: lambdas/getDixieComments/
       Handler: app.handler
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 3
       MemorySize: 128
       Policies:
@@ -147,16 +147,16 @@ Resources:
         UploadAssetAPI:
           Type: HttpApi
           Properties:
-            Path: /getComments
+            Path: /getDixieComments
             Method: get
             ApiId: !Ref MyApi
 
   FileReadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/getFiles/
+      CodeUri: lambdas/getDixieFiles/
       Handler: app.handler
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 3
       MemorySize: 128
       Policies:
@@ -165,7 +165,7 @@ Resources:
         UploadAssetAPI:
           Type: HttpApi
           Properties:
-            Path: /getFiles
+            Path: /getDixieFiles
             Method: get
             ApiId: !Ref MyApi
 
