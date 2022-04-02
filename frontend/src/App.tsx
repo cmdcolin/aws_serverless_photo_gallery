@@ -29,6 +29,7 @@ const reduce = new ImageBlobReduce({ pica })
 
 // generated with ls | jq -R -s -c 'split("\n")[:-1]' > gifs.json
 import gifs from './gifs.json'
+//generated with  ls | jq -R -s -c 'split("\n")[:-1]' > borders.json
 import borders from './borders.json'
 
 const myimages = shuffle(gifs)
@@ -743,7 +744,7 @@ function Header() {
             dixie
           </a>
           <img
-            src="img/animated-candle-image-0093.gif"
+            src="img/animated-candle-image-0093.gif.webp"
             style={{ height: '1em' }}
           />
         </h1>
