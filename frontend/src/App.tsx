@@ -340,7 +340,7 @@ function App() {
         <p className={classes.rainbow}>
           created with love for the beautiful pig who touched our hearts
         </p>
-        <img src="img/unnamed.gif" width={20} />
+        <img src="img/unnamed.gif.webp" width={20} />
         <a href="mailto:colin.diesh@gmail.com">contact</a>
       </div>
     </div>
