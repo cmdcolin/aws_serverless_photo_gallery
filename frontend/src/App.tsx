@@ -1,50 +1,27 @@
 /* eslint-disable */
-import React, { useMemo, useState, useReducer, useEffect } from 'react'
+import React, { Suspense, useMemo, useState, useEffect, lazy } from 'react'
 import { makeStyles } from '@mui/styles'
-import {
-  Dialog,
-  DialogTitle,
-  DialogActions,
-  DialogContent,
-  Link,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Button,
-  Select,
-} from '@mui/material'
+import { Link, IconButton, InputLabel, MenuItem, Select } from '@mui/material'
 
-import PublishIcon from '@mui/icons-material/Publish'
-import CreateIcon from '@mui/icons-material/Create'
+import { Publish } from '@mui/icons-material'
 import { NumberParam, StringParam, useQueryParam } from 'use-query-params'
-import ExifReader from 'exifreader'
 
-import ImageBlobReduce from 'image-blob-reduce'
-import Pica from 'pica'
+//locals
+import { myfetchjson, getCaption, shuffle, DixieFile } from './util'
+import { PAGE_SIZE, API_ENDPOINT } from './constants'
+import Media from './Media'
 
-// this is needed to disable the default features including webworkers, which
-// cra has trouble with currently
-const pica = Pica({ features: ['js', 'wasm', 'cib'] })
-const reduce = new ImageBlobReduce({ pica })
+// lazy
+const PictureDialog = lazy(() => import('./PictureDialog'))
+const UploadDialog = lazy(() => import('./UploadDialog'))
 
 // generated with ls | jq -R -s -c 'split("\n")[:-1]' > gifs.json
 import gifs from './gifs.json'
-//generated with  ls | jq -R -s -c 'split("\n")[:-1]' > borders.json
+// generated with  ls | jq -R -s -c 'split("\n")[:-1]' > borders.json
 import borders from './borders.json'
 
 const myimages = shuffle(gifs)
 const myborders = shuffle(borders)
-
-const PAGE_SIZE = 10
-const API_ENDPOINT = 'https://to45rgws05.execute-api.us-east-2.amazonaws.com/'
-const BUCKET =
-  'https://myloveydove-s3uploadbucket-wehl1ofnm65a.s3.us-east-2.amazonaws.com'
-
-//from https://stackoverflow.com/questions/43083993/javascript-how-to-convert-exif-date-time-data-to-timestamp
-const parseExifDate = (s: string) => {
-  const [year, month, date, hour, min, sec] = s.split(/\D/)
-  return new Date(+year, +month - 1, +date, +hour, +min, +sec)
-}
 
 const useStyles = makeStyles(() => ({
   app: {
@@ -53,17 +30,12 @@ const useStyles = makeStyles(() => ({
     padding: '0.5em',
   },
 
-  posts: {
-    background: '#ddd',
-  },
   gallery: {
     textAlign: 'center',
     borderRadius: 25,
     border: '1px solid black',
   },
-  post: {
-    padding: '0.5em',
-  },
+
   space: {
     padding: '2em',
   },
@@ -77,419 +49,8 @@ const useStyles = makeStyles(() => ({
   },
 }))
 
-function shuffle<T>(array: T[]) {
-  var currentIndex = array.length,
-    temporaryValue,
-    randomIndex
-  while (0 !== currentIndex) {
-    // Pick a remaining element...
-    randomIndex = Math.floor(Math.random() * currentIndex)
-    currentIndex -= 1
-
-    // And swap it with the current element.
-    temporaryValue = array[currentIndex]
-    array[currentIndex] = array[randomIndex]
-    array[randomIndex] = temporaryValue
-  }
-  return array
-}
-
-async function myfetch(params: string, opts?: any) {
-  const response = await fetch(params, opts)
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText}`)
-  }
-  return response
-}
-
-async function myfetchjson(params: string, opts?: any) {
-  const res = await myfetch(params, opts)
-  return res.json()
-}
-
-interface Comment {
-  timestamp: number
-  user?: string
-  message: string
-  date: string
-}
-
-function CommentForm({
-  filename,
-  forceRefresh,
-}: {
-  filename: string
-  forceRefresh: Function
-}) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<unknown>()
-  const [user, setUser] = useState('')
-  const [message, setMessage] = useState('')
-  const [password] = useQueryParam('password', StringParam)
-  const classes = useStyles()
-
-  return (
-    <div>
-      {error ? (
-        <div className={classes.error}>{`${error}`}</div>
-      ) : loading ? (
-        <p>Loading...</p>
-      ) : (
-        <p>Write a comment...</p>
-      )}
-
-      <CreateIcon />
-      <label htmlFor="user">name (optional)</label>
-      <input
-        id="user"
-        type="text"
-        value={user}
-        onChange={event => setUser(event.target.value)}
-      />
-      <textarea
-        style={{ width: '90%', height: 50 }}
-        value={message}
-        onChange={event => setMessage(event.target.value)}
-      />
-      <button
-        disabled={loading}
-        onClick={async () => {
-          try {
-            if (user || message) {
-              setLoading(true)
-              setError(undefined)
-
-              const data = new FormData()
-              data.append('message', message)
-              data.append('user', user)
-              data.append('filename', filename)
-              data.append('password', password || '')
-              await myfetchjson(API_ENDPOINT + '/postDixieComment', {
-                method: 'POST',
-                body: data,
-              })
-              setUser('')
-              setMessage('')
-              forceRefresh()
-            }
-          } catch (e) {
-            setError(e)
-          } finally {
-            setLoading(false)
-          }
-        }}
-      >
-        Submit
-      </button>
-    </div>
-  )
-}
-
-function PictureDialog({ onClose, file }: { onClose: Function; file?: File }) {
-  const [comments, setComments] = useState<Comment[]>()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<unknown>()
-  const [counter, setCounter] = useState(0)
-  const [password] = useQueryParam('password', StringParam)
-  const classes = useStyles()
-
-  const handleClose = () => {
-    setLoading(false)
-    setError(undefined)
-    onClose()
-  }
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        if (file) {
-          const result = await myfetchjson(
-            API_ENDPOINT + `/getDixieComments?filename=${file?.filename}`,
-          )
-          setComments(result)
-        }
-      } catch (e) {
-        setError(e)
-      }
-    })()
-  }, [file, counter])
-
-  return (
-    <Dialog onClose={handleClose} open={Boolean(file)} maxWidth="lg">
-      <DialogTitle>{file ? file.filename : ''}</DialogTitle>
-      <DialogContent>
-        {file ? (
-          <Media file={file} style={{ width: '80%', maxHeight: '70%' }}>
-            {getCaption(file)}
-          </Media>
-        ) : null}
-        {error ? (
-          <div className={classes.error}>{`${error}`}</div>
-        ) : loading ? (
-          'Loading...'
-        ) : comments ? (
-          <div className={classes.posts}>
-            {comments
-              .sort((a, b) => a.timestamp - b.timestamp)
-              .map(comment => {
-                const { user, timestamp, message } = comment
-                return (
-                  <div
-                    key={JSON.stringify(comment)}
-                    className={classes.post}
-                    style={{ background: '#ddd' }}
-                  >
-                    <div>
-                      {user ? user + ' - ' : ''}
-                      {new Date(timestamp).toLocaleString()}
-                    </div>
-                    <div>{message}</div>
-                  </div>
-                )
-              })}
-          </div>
-        ) : null}
-        {file && password ? (
-          <CommentForm
-            filename={file.filename}
-            forceRefresh={() => setCounter(counter + 1)}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function UploadDialog({
-  open,
-  onClose,
-}: {
-  open: boolean
-  onClose: () => void
-}) {
-  const [images, setImages] = useState<FileList>()
-  const [error, setError] = useState<unknown>()
-  const [loading, setLoading] = useState(false)
-  const [total, setTotal] = useState(0)
-  const [completed, setCompleted] = useState(0)
-  const [user, setUser] = useState('')
-  const [message, setMessage] = useState('')
-  const [password] = useQueryParam('password', StringParam)
-  const classes = useStyles()
-
-  const handleClose = () => {
-    setError(undefined)
-    setLoading(false)
-    setImages(undefined)
-    setCompleted(0)
-    setTotal(0)
-    setMessage('')
-    onClose()
-  }
-
-  return (
-    <Dialog onClose={handleClose} open={open}>
-      <DialogTitle>upload a dixie (supports picture or video)</DialogTitle>
-
-      <DialogContent>
-        <label htmlFor="user">name (optional) </label>
-        <input
-          type="text"
-          value={user}
-          onChange={event => setUser(event.target.value)}
-          id="user"
-        />
-        <br />
-        <label htmlFor="user">album name (optional) </label>
-        <input
-          type="text"
-          value={message}
-          onChange={event => setMessage(event.target.value)}
-          id="message"
-        />
-        <br />
-        <input
-          multiple
-          type="file"
-          onChange={e => {
-            let files = e.target.files
-            if (files && files.length) {
-              setImages(files)
-            }
-          }}
-        />
-
-        {error ? (
-          <div className={classes.error}>{`${error}`}</div>
-        ) : loading ? (
-          `Uploading...${completed}/${total}`
-        ) : completed ? (
-          <h2>Uploaded </h2>
-        ) : null}
-
-        <DialogActions>
-          <Button
-            style={{ textTransform: 'none' }}
-            onClick={async () => {
-              try {
-                if (images) {
-                  setLoading(true)
-                  setError(undefined)
-                  setCompleted(0)
-                  setTotal(images.length)
-                  for (const image of Array.from(images)) {
-                    const exifData: {
-                      DateTime?: { description: string }
-                    } = await new Promise((resolve, reject) => {
-                      var reader = new FileReader()
-
-                      reader.onload = function (e) {
-                        if (e.target && e.target.result) {
-                          try {
-                            resolve(
-                              ExifReader.load(e.target.result as ArrayBuffer),
-                            )
-                          } catch (e) {
-                            /* swallow error because exif error not that important maybe */
-                          }
-                        }
-                        resolve({})
-                      }
-                      reader.onerror = reject
-                      reader.readAsArrayBuffer(image)
-                    })
-
-                    const data = new FormData()
-                    data.append('message', message)
-                    data.append('user', user)
-                    data.append('filename', image.name)
-                    data.append('contentType', image.type)
-                    data.append('password', password || '')
-
-                    if (exifData.DateTime) {
-                      const exifTimestamp = +parseExifDate(
-                        exifData.DateTime.description,
-                      )
-                      data.append('exifTimestamp', `${exifTimestamp}`)
-                    } else {
-                      data.append('exifTimestamp', `${+new Date('1960')}`)
-                    }
-
-                    const res = await myfetchjson(
-                      API_ENDPOINT + '/postDixieFile',
-                      {
-                        method: 'POST',
-                        body: data,
-                      },
-                    )
-                    if (res.uploadThumbnailURL) {
-                      const reducedImage = await reduce.toBlob(image, {
-                        max: 500,
-                      })
-                      await myfetch(res.uploadThumbnailURL, {
-                        method: 'PUT',
-                        body: reducedImage,
-                      })
-                    }
-                    await myfetch(res.uploadURL, {
-                      method: 'PUT',
-                      body: image,
-                    })
-
-                    setCompleted(completed => completed + 1)
-                  }
-                  setTimeout(() => {
-                    handleClose()
-                  }, 500)
-                }
-              } catch (e) {
-                setError(e)
-              }
-            }}
-            color="primary"
-          >
-            upload
-          </Button>
-          <Button
-            onClick={handleClose}
-            color="primary"
-            style={{ textTransform: 'none' }}
-          >
-            cancel
-          </Button>
-        </DialogActions>
-      </DialogContent>
-    </Dialog>
-  )
-}
-interface Item {
-  message: string
-  user: string
-  timestamp: number
-}
-
-interface File {
-  timestamp: number
-  filename: string
-  user: string
-  message: string
-  date: string
-  contentType: string
-  comments: unknown[]
-  exifTimestamp: number
-}
-function Media({
-  file,
-  style,
-  onClick,
-  children,
-}: {
-  file: File
-  onClick?: Function
-  style?: React.CSSProperties
-  children?: React.ReactNode
-}) {
-  const { filename, contentType } = file
-  const src = `${BUCKET}/${filename}`
-  return (
-    <figure style={{ display: 'inline-block' }}>
-      <picture>
-        {contentType.startsWith('video') ? (
-          <video
-            style={style}
-            src={src}
-            controls
-            onClick={event => {
-              if (onClick) {
-                onClick(event)
-                event.preventDefault()
-              }
-            }}
-          />
-        ) : (
-          <img style={style} src={src} onClick={onClick as any} />
-        )}
-      </picture>
-      <figcaption>{children}</figcaption>
-    </figure>
-  )
-}
-
-function getCaption(file: File) {
-  const { user, message, timestamp, exifTimestamp } = file
-  return `${
-    user || message
-      ? `${user ? user + ' - ' : ''}${message ? message : ''}`
-      : ' '
-  } posted ${new Date(timestamp).toLocaleDateString()} ${
-    exifTimestamp && exifTimestamp !== +new Date('1960')
-      ? `| taken ${new Date(exifTimestamp).toLocaleDateString()}`
-      : ''
-  }`
-}
-
 function Gallery() {
-  const [files, setFiles] = useState<File[]>()
+  const [files, setFiles] = useState<DixieFile[]>()
   const [error, setError] = useState<unknown>()
   const [uploading, setUploading] = useState(false)
   const [initialStart, setParamStart] = useQueryParam('start', NumberParam)
@@ -501,7 +62,7 @@ function Gallery() {
   const [sort, setSort] = useState(initialSort || 'date_uploaded_dec')
   const [start, setStart] = useState(initialStart || 0)
 
-  const [dialogFile, setDialogFile] = useState<File>()
+  const [dialogFile, setDialogFile] = useState<DixieFile>()
 
   const classes = useStyles()
 
@@ -603,7 +164,7 @@ function Gallery() {
             onClick={() => setUploading(true)}
           >
             add a dixie pic/video
-            <PublishIcon />
+            <Publish />
           </IconButton>
         ) : null}
       </div>
@@ -616,12 +177,15 @@ function Gallery() {
         }}
       />
 
-      <PictureDialog
-        file={dialogFile}
-        onClose={() => {
-          setDialogFile(undefined)
-        }}
-      />
+      <Suspense fallback={<div />}>
+        <PictureDialog
+          file={dialogFile}
+          onClose={() => {
+            setDialogFile(undefined)
+          }}
+        />
+      </Suspense>
+
       {error ? (
         <div className={classes.error}>{`${error}`}</div>
       ) : fileList ? (
