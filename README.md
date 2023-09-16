@@ -1,3 +1,6 @@
+## MAKE SURE TO PUBLISH YOUR WEBSITE ON https://wiby.me/submit/
+https://wiby.me is a website that index allschool and light, websites, that arent commonly stored on big demon search engines 
+
 # aws_serverless_photo_gallery
 
 This is an extension of
