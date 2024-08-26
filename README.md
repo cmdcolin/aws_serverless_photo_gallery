@@ -27,7 +27,7 @@ actually post (see #security section)
 +--------------------+-+   +----------------------------------------+   +---v-----------------------------------+
 |                      |   |                                        |   |                                       |
 |   Client side        |   |   AWS Lambda "postFile"                |   |  AWS Lambda "postComment"             |
-|   React app (CRA)    +--->                                        |   |                                       |
+|   React app (vite)   +--->                                        |   |                                       |
 |                      |   |  - Generates pre-signed URL that the   |   |  - Updates the row in the "files"     |
 |                      |   |  client side uses to upload directly   |   |  table with a new comment (there is a |
 +---------+------------+   |  to S3                                 |   |  list of comments for each entry in   |
@@ -50,18 +50,19 @@ actually post (see #security section)
 
 ## Blogposts
 
-The process of making this was pretty involved so I made several blogposts about it
+The process of making this was pretty involved so I made several blogposts about
+it
 
-- Part 1: Initial experimentation with serverless architecture following the
-  AWS tutorial
+- Part 1: Initial experimentation with serverless architecture following the AWS
+  tutorial
   https://searchvoidstar.tumblr.com/post/638408397901987840/making-a-serverless-website-for-photo-upload-pt-1
 
 - Part 2: Converting the Vue demo code to React and demo lambda+cloudformation
   template
   https://searchvoidstar.tumblr.com/post/638602799897329664/making-a-serverless-website-for-photo-and-video
 
-- Part 3: registering a domain, using Route 53, and making the S3 static
-  website hooked up to CloudFront to make it https compatible
+- Part 3: registering a domain, using Route 53, and making the S3 static website
+  hooked up to CloudFront to make it https compatible
   https://searchvoidstar.tumblr.com/post/638618421776515072/making-a-https-accessible-s3-powered-static-site
 
 ### Security
@@ -101,19 +102,20 @@ The deployment will automatically do the following
   `sam-app-s3uploadbucket-1fyrebt7g2tr3`
 
 Then also update frontend/package.json to do `aws s3 sync` to your website
-bucket, and run `yarn deploy`. Note that your website bucket should be
-different from the one automatically created by the aws sam template.yaml here
+bucket, and run `yarn deploy`. Note that your website bucket should be different
+from the one automatically created by the aws sam template.yaml here
 
 ## Database design
 
-This code uses a simple DynamoDB database. I considered using Amazon RDS (e.g.
-a real database instead of dynamoDB) but the administration was too
-complicated, and so instead I updated the DynamoDB to have comments for the
-files directly inside the files table. Storing them separately would imply a
-join which DynamoDB does not have
+This code uses a simple DynamoDB database. I considered using Amazon RDS (e.g. a
+real database instead of dynamoDB) but the administration was too complicated,
+and so instead I updated the DynamoDB to have comments for the files directly
+inside the files table. Storing them separately would imply a join which
+DynamoDB does not have
 
-Note that there was a nice recommendation on reddit to use a specialized keys
-in DynamoDB to help avoid these problems. See https://github.com/cmdcolin/aws_serverless_photo_gallery/issues/8
+Note that there was a nice recommendation on reddit to use a specialized keys in
+DynamoDB to help avoid these problems. See
+https://github.com/cmdcolin/aws_serverless_photo_gallery/issues/8
 
 ## Scalability
 
