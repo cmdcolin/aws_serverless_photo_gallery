@@ -1,2 +1,2 @@
-declare module "image-blob-reduce";
-declare module "piexifjs";
+declare module 'image-blob-reduce'
+declare module 'piexifjs'

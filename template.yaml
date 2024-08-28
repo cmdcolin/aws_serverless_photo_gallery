@@ -7,29 +7,29 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "filename"
-          AttributeType: "S"
+        - AttributeName: 'filename'
+          AttributeType: 'S'
       KeySchema:
-        - AttributeName: "filename"
-          KeyType: "HASH"
+        - AttributeName: 'filename'
+          KeyType: 'HASH'
       ProvisionedThroughput:
-        ReadCapacityUnits: "5"
-        WriteCapacityUnits: "5"
-      TableName: "files"
+        ReadCapacityUnits: '5'
+        WriteCapacityUnits: '5'
+      TableName: 'files'
 
   guestbookDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "timestamp"
-          AttributeType: "N"
+        - AttributeName: 'timestamp'
+          AttributeType: 'N'
       KeySchema:
-        - AttributeName: "timestamp"
-          KeyType: "HASH"
+        - AttributeName: 'timestamp'
+          KeyType: 'HASH'
       ProvisionedThroughput:
-        ReadCapacityUnits: "5"
-        WriteCapacityUnits: "5"
-      TableName: "guestbook"
+        ReadCapacityUnits: '5'
+        WriteCapacityUnits: '5'
+      TableName: 'guestbook'
   MyApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -40,9 +40,9 @@ Resources:
           - DELETE
           - OPTIONS
         AllowHeaders:
-          - "*"
+          - '*'
         AllowOrigins:
-          - "*"
+          - '*'
 
   UploadRequestFunction:
     Type: AWS::Serverless::Function
@@ -62,7 +62,7 @@ Resources:
             BucketName: !Ref S3UploadBucket
         - Statement:
             - Effect: Allow
-              Resource: !Sub "arn:aws:s3:::${S3UploadBucket}/"
+              Resource: !Sub 'arn:aws:s3:::${S3UploadBucket}/'
               Action:
                 - s3:putObjectAcl
       Events:
@@ -176,22 +176,22 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders:
-              - "*"
+              - '*'
             AllowedMethods:
               - GET
               - PUT
               - HEAD
             AllowedOrigins:
-              - "*"
+              - '*'
 
 ## Take a note of the outputs for deploying the workflow templates in this sample application
 Outputs:
   APIendpoint:
-    Description: "HTTP API endpoint URL"
-    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Description: 'HTTP API endpoint URL'
+    Value: !Sub 'https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com'
   S3UploadBucketName:
-    Description: "S3 bucket for application uploads"
-    Value: !Ref "S3UploadBucket"
+    Description: 'S3 bucket for application uploads'
+    Value: !Ref 'S3UploadBucket'
 
 Parameters:
   SecretPassword:

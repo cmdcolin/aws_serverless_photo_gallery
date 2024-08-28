@@ -34,7 +34,7 @@ function CommentForm({
   forceRefresh,
 }: {
   filename: string
-  forceRefresh: Function
+  forceRefresh: () => void
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<unknown>()

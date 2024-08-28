@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "format": "prettier --write .",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -12,9 +13,9 @@
   "dependencies": {
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
-    "@mui/icons-material": "^5.16.7",
-    "@mui/material": "^5.16.7",
-    "@mui/styles": "^5.16.7",
+    "@mui/icons-material": "^6.0.0",
+    "@mui/material": "^6.0.0",
+    "@mui/styles": "^6.0.0",
     "exifreader": "^4.4.0",
     "image-blob-reduce": "^4.1.0",
     "pica": "^9.0.1",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
+    "@types/pica": "^9.0.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
