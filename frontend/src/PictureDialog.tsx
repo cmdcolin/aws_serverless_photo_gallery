@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { StringParam, useQueryParam } from 'use-query-params'
+import { useQueryState } from 'nuqs'
 import { makeStyles } from '@mui/styles'
 import { Dialog, DialogTitle, DialogContent } from '@mui/material'
 import { Create } from '@mui/icons-material'
@@ -40,7 +40,7 @@ function CommentForm({
   const [error, setError] = useState<unknown>()
   const [user, setUser] = useState('')
   const [message, setMessage] = useState('')
-  const [password] = useQueryParam('password', StringParam)
+  const [password] = useQueryState('password')
   const classes = useStyles()
 
   return (
@@ -111,7 +111,7 @@ export default function PictureDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<unknown>()
   const [counter, setCounter] = useState(0)
-  const [password] = useQueryParam('password', StringParam)
+  const [password] = useQueryState('password')
   const classes = useStyles()
 
   const handleClose = () => {

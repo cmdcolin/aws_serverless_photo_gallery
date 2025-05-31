@@ -18,11 +18,11 @@
     "@mui/styles": "^6.0.0",
     "exifreader": "^4.4.0",
     "image-blob-reduce": "^4.1.0",
+    "nuqs": "^2.4.3",
     "pica": "^9.0.1",
     "query-string": "^9.1.1",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "use-query-params": "^2.2.1"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

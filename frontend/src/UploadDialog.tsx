@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { StringParam, useQueryParam } from 'use-query-params'
+import { useQueryState } from 'nuqs'
 import {
   Dialog,
   DialogTitle,
@@ -43,7 +43,7 @@ export default function UploadDialog({
   const [completed, setCompleted] = useState(0)
   const [user, setUser] = useState('')
   const [message, setMessage] = useState('')
-  const [password] = useQueryParam('password', StringParam)
+  const [password] = useQueryState('password')
   const classes = useStyles()
 
   const handleClose = () => {

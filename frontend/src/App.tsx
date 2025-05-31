@@ -4,9 +4,8 @@ import { makeStyles } from '@mui/styles'
 import { Link, IconButton, InputLabel, MenuItem, Select } from '@mui/material'
 
 import { Publish } from '@mui/icons-material'
-import { NumberParam, StringParam, useQueryParam } from 'use-query-params'
+import { createParser, useQueryState } from 'nuqs'
 
-//locals
 import { myfetchjson, getCaption, shuffle, DixieFile } from './util'
 import { PAGE_SIZE, API_ENDPOINT } from './constants'
 import Media from './Media'
@@ -53,10 +52,15 @@ function Gallery() {
   const [files, setFiles] = useState<DixieFile[]>()
   const [error, setError] = useState<unknown>()
   const [uploading, setUploading] = useState(false)
-  const [initialStart, setParamStart] = useQueryParam('start', NumberParam)
-  const [initialSort, setSortParam] = useQueryParam('sort', StringParam)
-  const [initialFilter, setFilterParam] = useQueryParam('filter', StringParam)
-  const [password] = useQueryParam('password', StringParam)
+  const numberParser = createParser({
+    parse: Number,
+    serialize: String,
+  })
+  
+  const [initialStart, setParamStart] = useQueryState('start', numberParser)
+  const [initialSort, setSortParam] = useQueryState('sort')
+  const [initialFilter, setFilterParam] = useQueryState('filter')
+  const [password] = useQueryState('password')
   const [counter, setCounter] = useState(0)
   const [filter, setFilter] = useState(initialFilter || 'all')
   const [sort, setSort] = useState(initialSort || 'date_uploaded_dec')
