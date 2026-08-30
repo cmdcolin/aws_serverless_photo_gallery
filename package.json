@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "diagram": "dot -Tsvg architecture.dot -o architecture-light.svg && dot -Tsvg -Nfillcolor=\"#22272e\" -Ncolor=\"#768390\" -Nfontcolor=\"#adbac7\" -Ecolor=\"#768390\" -Efontcolor=\"#adbac7\" architecture.dot -o architecture-dark.svg"
   },
   "devDependencies": {
     "prettier": "^3.3.3"

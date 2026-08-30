@@ -20,33 +20,16 @@ actually post (see #security section)
 
 ## Architecture
 
-```
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="architecture-dark.svg"
+  />
+  <img alt="Architecture diagram" src="architecture-light.svg" />
+</picture>
 
-                     +------------------------------------------------------+
-                     |                                                      |
-+--------------------+-+   +----------------------------------------+   +---v-----------------------------------+
-|                      |   |                                        |   |                                       |
-|   Client side        |   |   AWS Lambda "postFile"                |   |  AWS Lambda "postComment"             |
-|   React app (vite)   +--->                                        |   |                                       |
-|                      |   |  - Generates pre-signed URL that the   |   |  - Updates the row in the "files"     |
-|                      |   |  client side uses to upload directly   |   |  table with a new comment (there is a |
-+---------+------------+   |  to S3                                 |   |  list of comments for each entry in   |
-          |                |  - Also inserts a row in the "files"   |   |  the files table)                     |
-          |                |  DynamoDB                              |   |                                       |
-          |                +----------------------------------------+   +---------------------------------------+
-          |
-+---------v-------------+  +----------------------------------------+
-|                       |  |                                        |
-|                       |  | AWS DynamoDB Table "files"             |
-|  AWS S3 bucket        |  | Each file has a filename that matches  |
-|  - The client talks   |  | filename in S3 bucket                  |
-|   directly to the S3  |  |                                        |
-|   bucket using the    |  | Each row in the "files" table also     |
-|   pre-signed URL that |  | has a list of comments (no separate    |
-|   "postFile" generates|  | comments table because no joins in     |
-|                       |  | DynamoDB)                              |
-+-----------------------+  +----------------------------------------+
-```
+The diagram is generated from `architecture.dot` with `yarn diagram` (requires
+graphviz)
 
 ## Blogposts
 
