@@ -1,37 +1,27 @@
-// eslint-disable-next-line import/no-unresolved
-const AWS = require('aws-sdk')
-const multipart = require('./multipart')
+import { PutCommand } from '@aws-sdk/lib-dynamodb'
+import { requirePassword } from '../lib/auth.js'
+import { documentClient } from '../lib/dynamo.js'
+import { jsonHandler, requireFields } from '../lib/http.js'
+import { parseFormFields } from '../lib/multipart.js'
 
-const DB = new AWS.DynamoDB.DocumentClient()
+const MAX_MESSAGE_LENGTH = 2000
+const MAX_USER_LENGTH = 100
 
-exports.handler = async event => {
-  try {
-    const data = multipart.parse(event)
-    const { message, user, password } = data
+export const handler = jsonHandler(async event => {
+  const data = parseFormFields(event)
+  requirePassword(data.password)
+  const { message, user } = requireFields(data, ['message'])
 
-    if (password !== process.env.Password) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ message: 'Access denied' }),
-      }
-    }
-    await DB.put({
+  await documentClient.send(
+    new PutCommand({
+      TableName: process.env.GuestbookTable,
       Item: {
         timestamp: Date.now(),
-        message,
-        user,
+        message: message.slice(0, MAX_MESSAGE_LENGTH),
+        user: user ? user.slice(0, MAX_USER_LENGTH) : undefined,
       },
-      TableName: 'guestbook',
-    }).promise()
+    }),
+  )
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: 'true' }),
-    }
-  } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: `${e}` }),
-    }
-  }
-}
+  return { success: true }
+})

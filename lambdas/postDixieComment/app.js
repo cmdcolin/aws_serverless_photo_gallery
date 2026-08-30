@@ -1,57 +1,48 @@
-// eslint-disable-next-line import/no-unresolved
-const AWS = require('aws-sdk')
-const multipart = require('./multipart')
+import { UpdateCommand } from '@aws-sdk/lib-dynamodb'
+import { requirePassword } from '../lib/auth.js'
+import { documentClient } from '../lib/dynamo.js'
+import { HttpError, jsonHandler, requireFields } from '../lib/http.js'
+import { parseFormFields } from '../lib/multipart.js'
 
-const { AWS_REGION: region } = process.env
+const MAX_MESSAGE_LENGTH = 2000
+const MAX_USER_LENGTH = 100
 
-const DB = new AWS.DynamoDB.DocumentClient()
+export const handler = jsonHandler(async event => {
+  const data = parseFormFields(event)
+  requirePassword(data.password)
+  const { filename, message, user } = requireFields(data, [
+    'filename',
+    'message',
+  ])
 
-async function uploadComment({ message, user, filename }) {
   const comment = {
     timestamp: Date.now(),
-    message,
-    user,
-    filename,
+    message: message.slice(0, MAX_MESSAGE_LENGTH),
+    user: user ? user.slice(0, MAX_USER_LENGTH) : undefined,
   }
-  return DB.update({
-    TableName: 'files',
-    Key: {
-      filename,
-    },
-    ReturnValues: 'ALL_NEW',
-    UpdateExpression:
-      'SET #comments = list_append(if_not_exists(#comments, :empty_list), :comment)',
-    ExpressionAttributeNames: {
-      '#comments': 'comments',
-    },
-    ExpressionAttributeValues: {
-      ':comment': [comment],
-      ':empty_list': [],
-    },
-  }).promise()
-}
 
-exports.handler = async event => {
   try {
-    const data = multipart.parse(event)
-    const { message, user, filename, password } = data
-
-    if (password !== process.env.Password) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ message: 'Access denied' }),
-      }
-    }
-    await uploadComment({ message, user, filename })
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: 'true' }),
-    }
+    await documentClient.send(
+      new UpdateCommand({
+        TableName: process.env.FilesTable,
+        Key: { filename },
+        // without this a comment on an unknown filename would insert a row
+        // that has no contentType, which the gallery cannot render
+        ConditionExpression: 'attribute_exists(#filename)',
+        UpdateExpression:
+          'SET #comments = list_append(if_not_exists(#comments, :empty), :comment)',
+        ExpressionAttributeNames: {
+          '#filename': 'filename',
+          '#comments': 'comments',
+        },
+        ExpressionAttributeValues: { ':comment': [comment], ':empty': [] },
+      }),
+    )
   } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: `${e}` }),
-    }
+    throw e.name === 'ConditionalCheckFailedException'
+      ? new HttpError(404, `no such file: ${filename}`)
+      : e
   }
-}
+
+  return { success: true }
+})

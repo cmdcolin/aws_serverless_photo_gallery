@@ -1,34 +1,11 @@
-// eslint-disable-next-line import/no-unresolved
-const AWS = require('aws-sdk')
+import { GetCommand } from '@aws-sdk/lib-dynamodb'
+import { documentClient } from '../lib/dynamo.js'
+import { jsonHandler, requireFields } from '../lib/http.js'
 
-const docClient = new AWS.DynamoDB.DocumentClient()
-
-exports.handler = async event => {
-  try {
-    const { filename } = event.queryStringParameters
-    const result = await docClient
-      .scan({
-        TableName: 'files',
-        FilterExpression: '#filename = :filename',
-        ExpressionAttributeNames: {
-          '#filename': 'filename',
-        },
-        ExpressionAttributeValues: {
-          ':filename': filename,
-        },
-      })
-      .promise()
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify(
-        (result.Items.length && result.Items[0].comments) || [],
-      ),
-    }
-  } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: `${e}` }),
-    }
-  }
-}
+export const handler = jsonHandler(async event => {
+  const { filename } = requireFields(event.queryStringParameters, ['filename'])
+  const { Item } = await documentClient.send(
+    new GetCommand({ TableName: process.env.FilesTable, Key: { filename } }),
+  )
+  return Item?.comments ?? []
+})

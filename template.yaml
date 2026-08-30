@@ -2,34 +2,63 @@ AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: S3 Uploader
 
+Parameters:
+  SecretPassword:
+    Type: String
+    Default: password
+    NoEcho: true
+    Description: Password callers must supply to upload files or post comments
+
+Globals:
+  Function:
+    # every function ships the same bundle and picks its entry point with the
+    # Handler below, so the lib/ helpers only exist once
+    CodeUri: lambdas/
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    Timeout: 10
+    MemorySize: 256
+    LoggingConfig:
+      LogFormat: JSON
+    Environment:
+      Variables:
+        FilesTable: !Ref filesDynamoDBTable
+        GuestbookTable: !Ref guestbookDynamoDBTable
+
 Resources:
   filesDynamoDBTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
+      TableName: files
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: 'filename'
-          AttributeType: 'S'
+        - AttributeName: filename
+          AttributeType: S
       KeySchema:
-        - AttributeName: 'filename'
-          KeyType: 'HASH'
-      ProvisionedThroughput:
-        ReadCapacityUnits: '5'
-        WriteCapacityUnits: '5'
-      TableName: 'files'
+        - AttributeName: filename
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
   guestbookDynamoDBTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
+      TableName: guestbook
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: 'timestamp'
-          AttributeType: 'N'
+        - AttributeName: timestamp
+          AttributeType: N
       KeySchema:
-        - AttributeName: 'timestamp'
-          KeyType: 'HASH'
-      ProvisionedThroughput:
-        ReadCapacityUnits: '5'
-        WriteCapacityUnits: '5'
-      TableName: 'guestbook'
+        - AttributeName: timestamp
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
   MyApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -37,7 +66,6 @@ Resources:
         AllowMethods:
           - GET
           - POST
-          - DELETE
           - OPTIONS
         AllowHeaders:
           - '*'
@@ -47,24 +75,16 @@ Resources:
   UploadRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/postDixieFile/
-      Handler: app.handler
-      Runtime: nodejs14.x
-      Timeout: 3
-      MemorySize: 128
+      Handler: postDixieFile/app.handler
       Environment:
         Variables:
           UploadBucket: !Ref S3UploadBucket
           Password: !Ref SecretPassword
       Policies:
-        - AmazonDynamoDBFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: !Ref filesDynamoDBTable
         - S3WritePolicy:
             BucketName: !Ref S3UploadBucket
-        - Statement:
-            - Effect: Allow
-              Resource: !Sub 'arn:aws:s3:::${S3UploadBucket}/'
-              Action:
-                - s3:putObjectAcl
       Events:
         UploadAssetAPI:
           Type: HttpApi
@@ -76,16 +96,13 @@ Resources:
   GuestlistPostFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/postGuestbookComment/
-      Handler: app.handler
-      Runtime: nodejs14.x
-      Timeout: 3
-      MemorySize: 128
+      Handler: postGuestbookComment/app.handler
       Environment:
         Variables:
           Password: !Ref SecretPassword
       Policies:
-        - AmazonDynamoDBFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: !Ref guestbookDynamoDBTable
       Events:
         UploadAssetAPI:
           Type: HttpApi
@@ -97,13 +114,10 @@ Resources:
   GuestlistReadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/getGuestbookComments/
-      Handler: app.handler
-      Runtime: nodejs14.x
-      Timeout: 3
-      MemorySize: 128
+      Handler: getGuestbookComments/app.handler
       Policies:
-        - AmazonDynamoDBFullAccess
+        - DynamoDBReadPolicy:
+            TableName: !Ref guestbookDynamoDBTable
       Events:
         UploadAssetAPI:
           Type: HttpApi
@@ -115,16 +129,13 @@ Resources:
   CommentPostFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/postDixieComment/
-      Handler: app.handler
-      Runtime: nodejs14.x
-      Timeout: 3
-      MemorySize: 128
+      Handler: postDixieComment/app.handler
       Environment:
         Variables:
           Password: !Ref SecretPassword
       Policies:
-        - AmazonDynamoDBFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: !Ref filesDynamoDBTable
       Events:
         UploadAssetAPI:
           Type: HttpApi
@@ -136,13 +147,10 @@ Resources:
   CommentReadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/getDixieComments/
-      Handler: app.handler
-      Runtime: nodejs14.x
-      Timeout: 3
-      MemorySize: 128
+      Handler: getDixieComments/app.handler
       Policies:
-        - AmazonDynamoDBFullAccess
+        - DynamoDBReadPolicy:
+            TableName: !Ref filesDynamoDBTable
       Events:
         UploadAssetAPI:
           Type: HttpApi
@@ -154,13 +162,10 @@ Resources:
   FileReadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/getDixieFiles/
-      Handler: app.handler
-      Runtime: nodejs14.x
-      Timeout: 3
-      MemorySize: 128
+      Handler: getDixieFiles/app.handler
       Policies:
-        - AmazonDynamoDBFullAccess
+        - DynamoDBReadPolicy:
+            TableName: !Ref filesDynamoDBTable
       Events:
         UploadAssetAPI:
           Type: HttpApi
@@ -172,7 +177,19 @@ Resources:
   ## S3 bucket
   S3UploadBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
+      # S3 disables ACLs on new buckets, so public read comes from the bucket
+      # policy below rather than a public-read ACL on each upload
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders:
@@ -184,16 +201,22 @@ Resources:
             AllowedOrigins:
               - '*'
 
+  S3UploadBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3UploadBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${S3UploadBucket.Arn}/*'
+
 ## Take a note of the outputs for deploying the workflow templates in this sample application
 Outputs:
   APIendpoint:
-    Description: 'HTTP API endpoint URL'
+    Description: HTTP API endpoint URL
     Value: !Sub 'https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com'
   S3UploadBucketName:
-    Description: 'S3 bucket for application uploads'
-    Value: !Ref 'S3UploadBucket'
-
-Parameters:
-  SecretPassword:
-    Type: String
-    Default: password
+    Description: S3 bucket for application uploads
+    Value: !Ref S3UploadBucket

@@ -1,29 +1,6 @@
-// eslint-disable-next-line import/no-unresolved
-const AWS = require('aws-sdk')
+import { scanAll } from '../lib/dynamo.js'
+import { jsonHandler } from '../lib/http.js'
 
-const { AWS_REGION: region } = process.env
-
-const docClient = new AWS.DynamoDB.DocumentClient()
-
-const getItems = function () {
-  const params = {
-    TableName: 'guestbook',
-  }
-
-  return docClient.scan(params).promise()
-}
-
-exports.handler = async event => {
-  try {
-    const result = await getItems()
-    return {
-      statusCode: 200,
-      body: JSON.stringify(result),
-    }
-  } catch (e) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ message: `${e}` }),
-    }
-  }
-}
+export const handler = jsonHandler(async () => ({
+  Items: await scanAll(process.env.GuestbookTable),
+}))
