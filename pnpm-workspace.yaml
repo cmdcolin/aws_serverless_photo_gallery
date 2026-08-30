@@ -1,0 +1,8 @@
+packages:
+  - frontend
+  - lambdas
+
+allowBuilds:
+  # exifreader's postinstall only rebuilds when the consumer supplies an
+  # `exifreader` config block, which this app does not
+  exifreader: false

@@ -30,8 +30,27 @@ password does not match the server side one (see [Security](#security))
   <img alt="Architecture diagram" src="architecture-light.svg" />
 </picture>
 
-The diagram is generated from `architecture.dot` with `yarn diagram` (requires
+The diagram is generated from `architecture.dot` with `pnpm diagram` (requires
 graphviz)
+
+## Development
+
+This is a pnpm workspace containing the `frontend` (React + vite) and the
+`lambdas`
+
+```
+pnpm install
+pnpm dev        # vite dev server against the deployed API
+pnpm build      # typecheck and bundle to frontend/dist
+pnpm lint
+pnpm format
+```
+
+The lambdas share a single deployment bundle: every function has
+`CodeUri: lambdas/` and selects its entry point with its `Handler`, so the
+helpers in `lambdas/lib/` (multipart parsing, the password check, the DynamoDB
+client, the JSON response wrapper) exist once rather than once per function.
+`sam build` installs their dependencies with npm, independently of pnpm
 
 ## Deployment
 
@@ -52,11 +71,16 @@ You can specify the SecretPassword in the guided mode. The deployment
 - Creates lambda functions for posting/reading files and comments
 - Creates dynamodb tables for guestbook and files
 - Creates an s3 bucket that it puts the photos in. It has a coded name like
-  `sam-app-s3uploadbucket-1fyrebt7g2tr3`
+  `sam-app-s3uploadbucket-1fyrebt7g2tr3`. Public read comes from a bucket policy
+  rather than a `public-read` ACL on each object, because S3 disables ACLs on
+  new buckets
 
-Then update `frontend/package.json` to do `aws s3 sync` to your website bucket,
-and run `yarn deploy`. Note that your website bucket should be different from
-the one automatically created by `template.yaml` here
+The tables and the upload bucket are marked `DeletionPolicy: Retain`, so tearing
+the stack down does not take the photos with it
+
+Then add an `aws s3 sync` script to `frontend/package.json` pointing at your
+website bucket and run it. Note that your website bucket should be different
+from the one automatically created by `template.yaml` here
 
 ## Security
 
