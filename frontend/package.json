@@ -6,6 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "pnpm deploy:assets && pnpm deploy:static && pnpm deploy:index && pnpm deploy:invalidate",
+    "deploy:assets": "aws s3 sync dist/assets/ s3://myloveydove.com/assets/ --cache-control 'public, max-age=31536000, immutable'",
+    "deploy:static": "aws s3 sync dist/ s3://myloveydove.com/ --exclude 'assets/*' --exclude index.html --cache-control 'public, max-age=86400'",
+    "deploy:index": "aws s3 cp dist/index.html s3://myloveydove.com/index.html --cache-control no-cache",
+    "deploy:invalidate": "aws cloudfront create-invalidation --distribution-id E18JD5XP4HQPUW --paths '/*'",
     "lint": "eslint .",
     "preview": "vite preview"
   },
