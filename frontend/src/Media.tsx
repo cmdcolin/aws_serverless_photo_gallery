@@ -1,39 +1,53 @@
-import { DixieFile } from './util'
 import { BUCKET } from './constants'
+import { isVideo } from './files'
+import type { DixieFile } from './types'
+import { getCaption } from './util'
+import classes from './Media.module.css'
 
 export default function Media({
   file,
+  filename = file.filename,
+  className,
   style,
   onClick,
   children,
 }: {
   file: DixieFile
-  onClick?: Function
+  filename?: string
+  className?: string
   style?: React.CSSProperties
+  onClick?: () => void
   children?: React.ReactNode
 }) {
-  const { filename, contentType } = file
   const src = `${BUCKET}/${filename}`
   return (
-    <figure style={{ display: 'inline-block' }}>
-      <picture>
-        {contentType.startsWith('video') ? (
-          <video
-            style={style}
-            src={src}
-            controls
-            onClick={event => {
-              if (onClick) {
-                onClick(event)
-                event.preventDefault()
-              }
-            }}
-          />
-        ) : (
-          <img style={style} src={src} onClick={onClick as any} />
-        )}
-      </picture>
-      <figcaption>{children}</figcaption>
+    <figure className={classes.figure}>
+      {isVideo(file) ? (
+        <video
+          className={className}
+          style={style}
+          src={src}
+          controls
+          playsInline
+          preload="metadata"
+          onClick={() => {
+            onClick?.()
+          }}
+        />
+      ) : (
+        <img
+          className={className}
+          style={style}
+          src={src}
+          alt={getCaption(file)}
+          loading="lazy"
+          decoding="async"
+          onClick={() => {
+            onClick?.()
+          }}
+        />
+      )}
+      <figcaption className={classes.caption}>{children}</figcaption>
     </figure>
   )
 }

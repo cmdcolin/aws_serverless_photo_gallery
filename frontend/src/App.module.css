@@ -1,0 +1,40 @@
+.app {
+  color: white;
+  text-align: center;
+  padding: 0.5em;
+}
+
+.header {
+  padding: 2em;
+}
+
+.headerLink {
+  color: white;
+}
+
+.candle {
+  height: 1em;
+}
+
+.footer {
+  margin: 0 auto;
+  padding: 1em;
+  width: 25%;
+  min-width: 300px;
+}
+
+.rainbow {
+  background-image: linear-gradient(
+    to left,
+    violet,
+    indigo,
+    blue,
+    green,
+    yellow,
+    orange,
+    red
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}

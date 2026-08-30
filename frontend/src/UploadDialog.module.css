@@ -1,0 +1,17 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5em;
+  align-self: flex-end;
+  padding-top: 0.5em;
+}
+
+.error {
+  color: red;
+}

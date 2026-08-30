@@ -1,59 +1,41 @@
-export interface DixieFile {
-  timestamp: number
-  filename: string
-  user: string
-  message: string
-  date: string
-  contentType: string
-  comments: unknown[]
-  exifTimestamp: number
-}
+import { NO_EXIF_TIMESTAMP } from './constants'
+import type { DixieFile } from './types'
 
 //from https://stackoverflow.com/questions/43083993/
 export function parseExifDate(s: string) {
-  const [year, month, date, hour, min, sec] = s.split(/\D/)
-  return new Date(+year, +month - 1, +date, +hour, +min, +sec)
+  const [year, month, date, hour, min, sec] = s.split(/\D/).map(Number)
+  return new Date(year, month - 1, date, hour, min, sec)
 }
 
-export async function myfetch(params: string, opts?: any) {
-  const response = await fetch(params, opts)
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText}`)
+export function shuffle<T>(array: readonly T[]) {
+  const result = [...array]
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
   }
-  return response
+  return result
 }
 
-export async function myfetchjson(params: string, opts?: any) {
-  const res = await myfetch(params, opts)
-  return res.json()
+// stable per-string pseudo-random value, so a given photo keeps the same
+// decorations across re-renders instead of flickering
+export function hash(s: string) {
+  let result = 0
+  for (let i = 0; i < s.length; i++) {
+    result = (Math.imul(31, result) + s.charCodeAt(i)) | 0
+  }
+  return Math.abs(result)
+}
+
+export function getExifDate(file: DixieFile) {
+  return file.exifTimestamp && file.exifTimestamp !== NO_EXIF_TIMESTAMP
+    ? new Date(file.exifTimestamp)
+    : undefined
 }
 
 export function getCaption(file: DixieFile) {
-  const { user, message, timestamp, exifTimestamp } = file
-  return `${
-    user || message
-      ? `${user ? user + ' - ' : ''}${message ? message : ''}`
-      : ' '
-  } posted ${new Date(timestamp).toLocaleDateString()} ${
-    exifTimestamp && exifTimestamp !== +new Date('1960')
-      ? `| taken ${new Date(exifTimestamp).toLocaleDateString()}`
-      : ''
-  }`
-}
-
-export function shuffle<T>(array: T[]) {
-  var currentIndex = array.length,
-    temporaryValue,
-    randomIndex
-  while (0 !== currentIndex) {
-    // Pick a remaining element...
-    randomIndex = Math.floor(Math.random() * currentIndex)
-    currentIndex -= 1
-
-    // And swap it with the current element.
-    temporaryValue = array[currentIndex]
-    array[currentIndex] = array[randomIndex]
-    array[randomIndex] = temporaryValue
-  }
-  return array
+  const { user, message, timestamp } = file
+  const exifDate = getExifDate(file)
+  const byline = [user, message].filter(Boolean).join(' - ')
+  const taken = exifDate ? ` | taken ${exifDate.toLocaleDateString()}` : ''
+  return `${byline} posted ${new Date(timestamp).toLocaleDateString()}${taken}`
 }

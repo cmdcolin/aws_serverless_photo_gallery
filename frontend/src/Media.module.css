@@ -1,0 +1,8 @@
+.figure {
+  display: inline-block;
+  margin: 0.5em;
+}
+
+.caption {
+  overflow-wrap: anywhere;
+}

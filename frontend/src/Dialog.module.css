@@ -1,0 +1,40 @@
+.dialog {
+  border: 1px solid #444;
+  border-radius: 12px;
+  padding: 0;
+  max-width: min(90vw, 1000px);
+  max-height: 90vh;
+  overflow: auto;
+  color: #222;
+  background: #fff;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.header {
+  display: flex;
+  gap: 1em;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5em 1em;
+  border-bottom: 1px solid #ddd;
+}
+
+.title {
+  margin: 0;
+  font-size: 1em;
+  overflow-wrap: anywhere;
+}
+
+.close {
+  flex: none;
+  font-size: 1.2em;
+  line-height: 1;
+  padding: 0.2em 0.5em;
+}
+
+.content {
+  padding: 1em;
+}
