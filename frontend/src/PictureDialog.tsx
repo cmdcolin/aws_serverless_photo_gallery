@@ -5,7 +5,7 @@ import CommentForm from './CommentForm'
 import Dialog from './Dialog'
 import Media from './Media'
 import type { Comment, DixieFile } from './types'
-import { getCaption } from './util'
+import { getCaption, getDisplayName } from './util'
 import classes from './PictureDialog.module.css'
 
 export default function PictureDialog({
@@ -37,7 +37,7 @@ export default function PictureDialog({
   }, [file.filename, refresh])
 
   return (
-    <Dialog title={file.filename} onClose={onClose}>
+    <Dialog title={getDisplayName(file)} onClose={onClose}>
       <Media file={file} className={classes.media}>
         {getCaption(file)}
       </Media>

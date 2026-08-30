@@ -1,4 +1,3 @@
-import { NO_EXIF_TIMESTAMP } from './constants'
 import type { DixieFile } from './types'
 
 //from https://stackoverflow.com/questions/43083993/
@@ -7,10 +6,17 @@ export function parseExifDate(s: string) {
   return new Date(year, month - 1, date, hour, min, sec)
 }
 
-export function shuffle<T>(array: readonly T[]) {
+// seeded so that the shuffled order survives a reload and the page number in
+// the URL keeps pointing at the same photos
+export function shuffle<T>(array: readonly T[], seed: number) {
   const result = [...array]
+  let state = seed
+  const random = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) | 0
+    return (state >>> 0) / 2 ** 32
+  }
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(random() * (i + 1))
     ;[result[i], result[j]] = [result[j], result[i]]
   }
   return result
@@ -27,9 +33,11 @@ export function hash(s: string) {
 }
 
 export function getExifDate(file: DixieFile) {
-  return file.exifTimestamp && file.exifTimestamp !== NO_EXIF_TIMESTAMP
-    ? new Date(file.exifTimestamp)
-    : undefined
+  return file.exifTimestamp ? new Date(file.exifTimestamp) : undefined
+}
+
+export function getDisplayName(file: DixieFile) {
+  return file.originalFilename ? file.originalFilename : file.filename
 }
 
 export function getCaption(file: DixieFile) {

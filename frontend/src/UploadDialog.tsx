@@ -3,7 +3,6 @@ import { useQueryState } from 'nuqs'
 import ExifReader from 'exifreader'
 import imageBlobReduce from 'image-blob-reduce'
 import { postFile, putToBucket } from './api'
-import { NO_EXIF_TIMESTAMP } from './constants'
 import Dialog from './Dialog'
 import { parseExifDate } from './util'
 import classes from './UploadDialog.module.css'
@@ -15,12 +14,10 @@ const reduce = imageBlobReduce()
 async function readExifTimestamp(file: File) {
   try {
     const tags = ExifReader.load(await file.arrayBuffer())
-    return tags.DateTime
-      ? +parseExifDate(tags.DateTime.description)
-      : NO_EXIF_TIMESTAMP
+    return tags.DateTime ? +parseExifDate(tags.DateTime.description) : undefined
   } catch {
     // an unreadable exif block should not stop the upload
-    return NO_EXIF_TIMESTAMP
+    return undefined
   }
 }
 
@@ -87,21 +84,26 @@ export default function UploadDialog({ onClose }: { onClose: () => void }) {
                 setCompleted(0)
 
                 for (const file of files) {
-                  const { uploadURL, uploadThumbnailURL } = await postFile({
-                    filename: file.name,
-                    contentType: file.type,
-                    message,
-                    user,
-                    password,
-                    exifTimestamp: `${await readExifTimestamp(file)}`,
-                  })
+                  const { uploadURL, uploadThumbnailURL, cacheControl } =
+                    await postFile({
+                      filename: file.name,
+                      contentType: file.type,
+                      message,
+                      user,
+                      password,
+                      exifTimestamp: await readExifTimestamp(file),
+                    })
                   if (uploadThumbnailURL) {
                     const thumbnail = await reduce.toBlob(file, {
                       max: THUMBNAIL_MAX_PIXELS,
                     })
-                    await putToBucket(uploadThumbnailURL, thumbnail)
+                    await putToBucket(
+                      uploadThumbnailURL,
+                      cacheControl,
+                      thumbnail,
+                    )
                   }
-                  await putToBucket(uploadURL, file)
+                  await putToBucket(uploadURL, cacheControl, file)
                   setCompleted(completed => completed + 1)
                 }
                 onClose()

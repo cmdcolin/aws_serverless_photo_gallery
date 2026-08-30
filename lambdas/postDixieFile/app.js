@@ -3,11 +3,19 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { PutCommand } from '@aws-sdk/lib-dynamodb'
 import { requirePassword } from '../lib/auth.js'
 import { documentClient } from '../lib/dynamo.js'
-import { HttpError, jsonHandler, requireFields } from '../lib/http.js'
-import { parseFormFields } from '../lib/multipart.js'
+import {
+  HttpError,
+  jsonHandler,
+  parseJsonBody,
+  requireTextFields,
+} from '../lib/http.js'
 
 const URL_EXPIRATION_SECONDS = 300
 const MAX_FILENAME_LENGTH = 100
+
+// every key is prefixed with the upload time, so an object at a given key never
+// changes and the browser never needs to revalidate it
+const CACHE_CONTROL = 'public, max-age=31536000, immutable'
 
 const s3 = new S3Client({})
 
@@ -24,18 +32,16 @@ function presignPut(Key, ContentType) {
       Bucket: process.env.UploadBucket,
       Key,
       ContentType,
+      CacheControl: CACHE_CONTROL,
     }),
     { expiresIn: URL_EXPIRATION_SECONDS },
   )
 }
 
 export const handler = jsonHandler(async event => {
-  const data = parseFormFields(event)
-  requirePassword(data.password)
-  const { filename, contentType, user, message, exifTimestamp } = requireFields(
-    data,
-    ['filename', 'contentType'],
-  )
+  requirePassword(event)
+  const { filename, contentType, user, message, exifTimestamp } =
+    requireTextFields(parseJsonBody(event), ['filename', 'contentType'])
 
   // the bucket is world readable, so do not let it become a host for
   // arbitrary content types
@@ -54,19 +60,31 @@ export const handler = jsonHandler(async event => {
       : undefined,
   ])
 
-  await documentClient.send(
-    new PutCommand({
-      TableName: process.env.FilesTable,
-      Item: {
-        timestamp,
-        filename: Key,
-        message,
-        user,
-        contentType,
-        exifTimestamp: Number.isFinite(exif) ? exif : undefined,
-      },
-    }),
-  )
+  try {
+    await documentClient.send(
+      new PutCommand({
+        TableName: process.env.FilesTable,
+        Item: {
+          timestamp,
+          filename: Key,
+          originalFilename: filename,
+          message,
+          user,
+          contentType,
+          commentCount: 0,
+          exifTimestamp: Number.isFinite(exif) ? exif : undefined,
+        },
+        // two uploads of the same name inside one millisecond would otherwise
+        // replace the earlier row and orphan its object
+        ConditionExpression: 'attribute_not_exists(#filename)',
+        ExpressionAttributeNames: { '#filename': 'filename' },
+      }),
+    )
+  } catch (e) {
+    throw e.name === 'ConditionalCheckFailedException'
+      ? new HttpError(409, `already uploaded: ${Key}`)
+      : e
+  }
 
-  return { uploadURL, uploadThumbnailURL, Key }
+  return { uploadURL, uploadThumbnailURL, cacheControl: CACHE_CONTROL, Key }
 })

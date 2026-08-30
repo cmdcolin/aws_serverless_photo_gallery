@@ -6,12 +6,12 @@ export const documentClient = DynamoDBDocumentClient.from(
   { marshallOptions: { removeUndefinedValues: true } },
 )
 
-export async function scanAll(TableName) {
+export async function scanAll(params) {
   const items = []
   let ExclusiveStartKey
   do {
     const result = await documentClient.send(
-      new ScanCommand({ TableName, ExclusiveStartKey }),
+      new ScanCommand({ ...params, ExclusiveStartKey }),
     )
     items.push(...result.Items)
     ExclusiveStartKey = result.LastEvaluatedKey

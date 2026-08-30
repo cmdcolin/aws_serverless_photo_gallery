@@ -22,12 +22,15 @@ function apiUrl(path: string, params: Record<string, string> = {}) {
   return url
 }
 
-function formData(fields: Record<string, string>) {
-  const data = new FormData()
-  for (const [key, value] of Object.entries(fields)) {
-    data.append(key, value)
-  }
-  return data
+function postJson<T>(path: string, password: string, body: unknown) {
+  return fetchJson<T>(apiUrl(path), {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${password}`,
+    },
+    body: JSON.stringify(body),
+  })
 }
 
 export async function fetchFiles(signal: AbortSignal) {
@@ -44,32 +47,43 @@ export function fetchComments(filename: string, signal: AbortSignal) {
   })
 }
 
-export function postComment(fields: {
+export function postComment({
+  password,
+  ...fields
+}: {
   filename: string
   message: string
   user: string
   password: string
 }) {
-  return fetchOk(apiUrl('/postDixieComment'), {
-    method: 'POST',
-    body: formData(fields),
-  })
+  return postJson<{ success: boolean }>('/postDixieComment', password, fields)
 }
 
-export function postFile(fields: {
+export function postFile({
+  password,
+  ...fields
+}: {
   filename: string
   contentType: string
   message: string
   user: string
   password: string
-  exifTimestamp: string
+  exifTimestamp?: number
 }) {
-  return fetchJson<{ uploadURL: string; uploadThumbnailURL?: string }>(
-    apiUrl('/postDixieFile'),
-    { method: 'POST', body: formData(fields) },
-  )
+  return postJson<{
+    uploadURL: string
+    uploadThumbnailURL?: string
+    cacheControl: string
+  }>('/postDixieFile', password, fields)
 }
 
-export function putToBucket(url: string, body: Blob) {
-  return fetchOk(url, { method: 'PUT', body })
+// only the host is signed into the presigned URL, so S3 stores whatever
+// cache-control the PUT actually sends. taking it from the lambda response
+// keeps the value in one place rather than duplicating the string here
+export function putToBucket(url: string, cacheControl: string, body: Blob) {
+  return fetchOk(url, {
+    method: 'PUT',
+    headers: { 'cache-control': cacheControl },
+    body,
+  })
 }

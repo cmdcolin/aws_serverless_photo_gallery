@@ -40,15 +40,13 @@ export function filterFiles(files: DixieFile[], filter: Filter) {
     case 'no_videos':
       return files.filter(file => !isVideo(file))
     case 'commented_on':
-      return files.filter(
-        file => file.comments !== undefined && file.comments.length > 0,
-      )
+      return files.filter(file => file.commentCount > 0)
     case 'all':
       return files
   }
 }
 
-export function sortFiles(files: DixieFile[], sort: Sort) {
+export function sortFiles(files: DixieFile[], sort: Sort, seed: number) {
   // files with no exif date sort to the end whichever direction we go, using
   // finite sentinels so that comparing two of them yields 0 rather than NaN
   const missingExif = sort === 'date_exif_asc' ? DISTANT_FUTURE : DISTANT_PAST
@@ -59,7 +57,7 @@ export function sortFiles(files: DixieFile[], sort: Sort) {
 
   switch (sort) {
     case 'random':
-      return shuffle(files)
+      return shuffle(files, seed)
     case 'date_uploaded_asc':
       return files.toSorted((a, b) => a.timestamp - b.timestamp)
     case 'date_uploaded_dec':

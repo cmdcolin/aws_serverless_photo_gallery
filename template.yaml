@@ -24,7 +24,6 @@ Globals:
     Environment:
       Variables:
         FilesTable: !Ref filesDynamoDBTable
-        GuestbookTable: !Ref guestbookDynamoDBTable
 
 Resources:
   filesDynamoDBTable:
@@ -43,22 +42,6 @@ Resources:
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
 
-  guestbookDynamoDBTable:
-    Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      TableName: guestbook
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: timestamp
-          AttributeType: N
-      KeySchema:
-        - AttributeName: timestamp
-          KeyType: HASH
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-
   MyApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -68,9 +51,15 @@ Resources:
           - POST
           - OPTIONS
         AllowHeaders:
-          - '*'
+          - authorization
+          - content-type
         AllowOrigins:
           - '*'
+      # a leaked password would otherwise mean unbounded uploads into a bucket
+      # this account pays for
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
 
   UploadRequestFunction:
     Type: AWS::Serverless::Function
@@ -91,39 +80,6 @@ Resources:
           Properties:
             Path: /postDixieFile
             Method: post
-            ApiId: !Ref MyApi
-
-  GuestlistPostFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: postGuestbookComment/app.handler
-      Environment:
-        Variables:
-          Password: !Ref SecretPassword
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref guestbookDynamoDBTable
-      Events:
-        UploadAssetAPI:
-          Type: HttpApi
-          Properties:
-            Path: /postGuestbookComment
-            Method: post
-            ApiId: !Ref MyApi
-
-  GuestlistReadFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: getGuestbookComments/app.handler
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref guestbookDynamoDBTable
-      Events:
-        UploadAssetAPI:
-          Type: HttpApi
-          Properties:
-            Path: /getGuestbookComments
-            Method: get
             ApiId: !Ref MyApi
 
   CommentPostFunction:

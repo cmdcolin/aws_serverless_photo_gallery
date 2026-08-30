@@ -28,11 +28,33 @@ export function jsonHandler(fn) {
   }
 }
 
-export function requireFields(data, names) {
+export function getHeader(event, name) {
+  const key = Object.keys(event.headers).find(
+    header => header.toLowerCase() === name,
+  )
+  return key ? event.headers[key] : undefined
+}
+
+export function parseJsonBody(event) {
+  const body = event.isBase64Encoded
+    ? Buffer.from(event.body, 'base64').toString('utf8')
+    : event.body
+  try {
+    return JSON.parse(body)
+  } catch {
+    throw new HttpError(400, 'request body is not valid JSON')
+  }
+}
+
+// every field these endpoints accept is text, so coerce here rather than
+// trusting a JSON body to have sent the right type into a DynamoDB key
+export function requireTextFields(data, names) {
   const fields = data ?? {}
   const missing = names.filter(name => !fields[name])
   if (missing.length) {
     throw new HttpError(400, `missing required fields: ${missing.join(', ')}`)
   }
-  return fields
+  return Object.fromEntries(
+    Object.entries(fields).map(([name, value]) => [name, `${value}`]),
+  )
 }

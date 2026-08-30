@@ -7,9 +7,10 @@ export interface Comment {
 export interface DixieFile {
   timestamp: number
   filename: string
+  originalFilename?: string
   contentType: string
   user?: string
   message?: string
-  comments?: Comment[]
+  commentCount: number
   exifTimestamp?: number
 }

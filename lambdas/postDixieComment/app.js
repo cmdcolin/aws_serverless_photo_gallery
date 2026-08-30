@@ -1,16 +1,19 @@
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb'
 import { requirePassword } from '../lib/auth.js'
 import { documentClient } from '../lib/dynamo.js'
-import { HttpError, jsonHandler, requireFields } from '../lib/http.js'
-import { parseFormFields } from '../lib/multipart.js'
+import {
+  HttpError,
+  jsonHandler,
+  parseJsonBody,
+  requireTextFields,
+} from '../lib/http.js'
 
 const MAX_MESSAGE_LENGTH = 2000
 const MAX_USER_LENGTH = 100
 
 export const handler = jsonHandler(async event => {
-  const data = parseFormFields(event)
-  requirePassword(data.password)
-  const { filename, message, user } = requireFields(data, [
+  requirePassword(event)
+  const { filename, message, user } = requireTextFields(parseJsonBody(event), [
     'filename',
     'message',
   ])
@@ -30,12 +33,17 @@ export const handler = jsonHandler(async event => {
         // that has no contentType, which the gallery cannot render
         ConditionExpression: 'attribute_exists(#filename)',
         UpdateExpression:
-          'SET #comments = list_append(if_not_exists(#comments, :empty), :comment)',
+          'SET #comments = list_append(if_not_exists(#comments, :empty), :comment) ADD #commentCount :one',
         ExpressionAttributeNames: {
           '#filename': 'filename',
           '#comments': 'comments',
+          '#commentCount': 'commentCount',
         },
-        ExpressionAttributeValues: { ':comment': [comment], ':empty': [] },
+        ExpressionAttributeValues: {
+          ':comment': [comment],
+          ':empty': [],
+          ':one': 1,
+        },
       }),
     )
   } catch (e) {

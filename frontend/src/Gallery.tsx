@@ -27,6 +27,7 @@ const PictureDialog = lazy(() => import('./PictureDialog'))
 const UploadDialog = lazy(() => import('./UploadDialog'))
 
 const DECORATION_ODDS = 4
+const MAX_SEED = 100000
 
 // derived from the filename so a photo keeps the same look between renders
 function getDecorations(filename: string) {
@@ -63,6 +64,7 @@ export default function Gallery() {
     'page',
     parseAsInteger.withDefault(1),
   )
+  const [seed, setSeed] = useQueryState('seed', parseAsInteger.withDefault(1))
 
   useEffect(() => {
     const controller = new AbortController()
@@ -81,8 +83,9 @@ export default function Gallery() {
   }, [refresh])
 
   const visibleFiles = useMemo(
-    () => (files ? sortFiles(filterFiles(files, filter), sort) : undefined),
-    [files, filter, sort],
+    () =>
+      files ? sortFiles(filterFiles(files, filter), sort, seed) : undefined,
+    [files, filter, sort, seed],
   )
 
   const pageCount = visibleFiles
@@ -111,6 +114,9 @@ export default function Gallery() {
           options={SORT_OPTIONS}
           onChange={value => {
             setSort(value)
+            if (value === 'random') {
+              setSeed(Math.floor(Math.random() * MAX_SEED))
+            }
           }}
         />
         {password ? (
@@ -150,7 +156,6 @@ export default function Gallery() {
         <>
           {visibleFiles.slice(start, start + PAGE_SIZE).map(file => {
             const { border, gif, gifHeight } = getDecorations(file.filename)
-            const commentCount = file.comments ? file.comments.length : 0
             return (
               <Fragment key={file.filename}>
                 <Media
@@ -177,7 +182,7 @@ export default function Gallery() {
                       setDialogFile(file)
                     }}
                   >
-                    {commentCount} comments
+                    {file.commentCount} comments
                   </button>
                 </Media>
 
