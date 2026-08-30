@@ -33,10 +33,12 @@ function postJson<T>(path: string, password: string, body: unknown) {
   })
 }
 
-export async function fetchFiles(signal: AbortSignal) {
+// the listing is served with a short max-age, so a caller that just changed it
+// asks for a fresh one rather than reading back the response it already has
+export async function fetchFiles(signal: AbortSignal, reload: boolean) {
   const { Items } = await fetchJson<{ Items: DixieFile[] }>(
     apiUrl('/getDixieFiles'),
-    { signal },
+    { signal, cache: reload ? 'reload' : 'default' },
   )
   return Items
 }

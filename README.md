@@ -123,6 +123,18 @@ projects the count and leaves `comments` out of the listing entirely. Only
 `getDixieComments`, which the picture dialog calls when you open a photo, reads
 the bodies
 
+That projection shrinks the response, not the read. A `Scan` is billed on the
+items it evaluates rather than the ones it returns, and the 1MB page limit
+applies before the projection too, so comment bodies you never send still cost
+capacity and still split the scan into more pages as they grow
+
+What actually bounds this design is the 400KB DynamoDB item limit, since the
+comments sit in the row they belong to. `postDixieComment` caps a photo at 150
+comments, which fits even if every one of them is the full 2000 characters, and
+returns a 409 rather than letting the write fail with a validation error at the
+real ceiling. Appending also rewrites the whole item, so the write cost of a
+comment grows with the comments already there
+
 Note that there was a nice recommendation on reddit to use specialized keys in
 DynamoDB to help avoid these problems, see
 [issue #8](https://github.com/cmdcolin/aws_serverless_photo_gallery/issues/8)
@@ -136,12 +148,19 @@ and it is what lets the random sort and the comment filter work at all, since
 neither is expressible as a DynamoDB query
 
 `getDixieFiles` is still a full table scan, because `filename` is the only key
-and there is no sort key to query on. The cheapest real fix is not a paginated
-query but to stop asking DynamoDB on the read path at all: regenerate an
-`index.json` into the bucket on write and serve it from a CDN. Doing pagination
-properly instead would mean a GSI with a constant partition key and `timestamp`
-as the sort key, using `LastEvaluatedKey` as an opaque cursor, plus a second GSI
-for the exif sort
+and there is no sort key to query on. The cheapest fix is not a different query
+but fewer of them: the listing goes out as `public, max-age=60`, so a reload or
+a second tab inside the window costs nothing. An upload is the one moment a
+visitor knows the listing changed, so that refetch passes `cache: 'reload'` to
+go around it
+
+Beyond that the honest next step is to stop asking DynamoDB on the read path at
+all: regenerate an `index.json` into the bucket on write and serve it from a
+CDN. Doing pagination properly instead would mean a GSI with a constant
+partition key and `timestamp` as the sort key, using `LastEvaluatedKey` as an
+opaque cursor, plus a second GSI for the exif sort. That costs the random sort
+and the comment filter, and a constant partition key is a single hot partition,
+which is the thing key design is supposed to avoid
 
 ## Maintenance scripts
 

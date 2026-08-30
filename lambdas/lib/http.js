@@ -5,20 +5,24 @@ export class HttpError extends Error {
   }
 }
 
-function json(statusCode, body) {
+function json(statusCode, body, cacheControl) {
   return {
     statusCode,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(cacheControl ? { 'cache-control': cacheControl } : {}),
+    },
     body: JSON.stringify(body),
   }
 }
 
 // wraps a handler that just returns its JSON payload, so every function shares
-// one error-to-status-code translation
-export function jsonHandler(fn) {
+// one error-to-status-code translation. cacheControl is only applied to the 200,
+// so a failure is never the response a browser keeps
+export function jsonHandler(fn, { cacheControl } = {}) {
   return async event => {
     try {
-      return json(200, await fn(event))
+      return json(200, await fn(event), cacheControl)
     } catch (e) {
       console.error(e)
       return e instanceof HttpError

@@ -70,7 +70,7 @@ export default function Gallery() {
     const controller = new AbortController()
     ;(async () => {
       try {
-        setFiles(await fetchFiles(controller.signal))
+        setFiles(await fetchFiles(controller.signal, refresh > 0))
       } catch (e) {
         if (!controller.signal.aborted) {
           setError(e)
